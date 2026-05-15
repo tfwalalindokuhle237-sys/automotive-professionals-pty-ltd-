@@ -12,6 +12,9 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+import os
+os.makedirs("uploads", exist_ok=True)
+
 app = Flask(__name__)
 app.secret_key = "CHANGE_THIS_TO_RANDOM_SECURE_KEY"
 
