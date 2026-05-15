@@ -340,7 +340,7 @@ margin-top:20px;
         <h3>Student Application</h3>
 
         <div class="slot">
-            Institution Logo (Admin Upload Panel)
+            Welcome To Automotive Professionals,continue below to proceed  with your registrations, all the best.)
         </div>
 
         <form method="POST" action="/apply" enctype="multipart/form-data">
