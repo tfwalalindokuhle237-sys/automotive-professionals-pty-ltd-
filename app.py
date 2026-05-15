@@ -407,7 +407,6 @@ margin-top:20px;
 </body>
 </html>
 """
-
 # ---------------- ROUTES ----------------
 
 def get_settings():
@@ -469,7 +468,8 @@ def apply():
     <h2 style='font-family:Arial'>Application Submitted ✅</h2>
     <a href='/'>Back Home</a>
     """
-    
+
+
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
@@ -504,6 +504,60 @@ def settings_page():
         <button>Save</button>
     </form>
     """, s=s)
+
+
+# ---------------- FIXED ADMIN HTML (ADDED) ----------------
+ADMIN_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;background:#111;color:white;margin:0;padding:20px;}
+input,textarea{width:100%;padding:10px;margin:6px 0;}
+button{padding:10px;background:#25D366;border:0;color:black;font-weight:bold;cursor:pointer;}
+table{width:100%;margin-top:20px;border-collapse:collapse;}
+td,th{border:1px solid #333;padding:8px;}
+</style>
+</head>
+<body>
+
+<h2>Admin Dashboard</h2>
+
+<h3>Update Settings</h3>
+<form method="POST">
+    <input name="hero" value="{{s['hero']}}">
+    <input name="whatsapp" value="{{s['whatsapp']}}">
+    <textarea name="courses">{{s['courses']}}</textarea>
+    <button>Save</button>
+</form>
+
+<h3>Applications</h3>
+<table>
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Course</th>
+<th>Date</th>
+</tr>
+
+{% for row in data %}
+<tr>
+<td>{{row['name']}}</td>
+<td>{{row['phone']}}</td>
+<td>{{row['email']}}</td>
+<td>{{row['course']}}</td>
+<td>{{row['date']}}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+</body>
+</html>
+"""
 
 
 @app.route("/admin", methods=["GET", "POST"])
@@ -583,7 +637,5 @@ def logout():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-    
-
 
 
