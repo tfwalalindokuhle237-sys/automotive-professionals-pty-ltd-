@@ -1,84 +1,118 @@
-from flask import Flask, render_template_string, request, redirect, session
+from flask import Flask, render_template_string, request, redirect, session, send_from_directory
 import sqlite3
-from datetime import datetime
 import os
+from datetime import datetime
+import smtplib
 
 app = Flask(__name__)
-app.secret_key = "secure_key_change_me"
+app.secret_key = "CHANGE_THIS_TO_A_SECURE_KEY"
 
+# ---------------- FILE UPLOAD CONFIG ----------------
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # ---------------- DATABASE ----------------
 def init_db():
     conn = sqlite3.connect("students.db")
     c = conn.cursor()
 
-    # ---------------- STUDENTS TABLE ----------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS applications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
+            name TEXT,
+            phone TEXT,
             email TEXT,
-            course TEXT NOT NULL,
-
+            course TEXT,
             id_file TEXT,
             cv_file TEXT,
-            image_file TEXT,
-
+            cert_file TEXT,
             message TEXT,
-
             status TEXT DEFAULT 'NEW',
-
-            date TEXT NOT NULL
+            date TEXT
         )
     """)
 
-    # ---------------- SETTINGS TABLE ----------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY,
-
             hero TEXT,
             whatsapp TEXT,
             email TEXT,
-            logo TEXT,
-
-            address TEXT
+            courses TEXT
         )
     """)
 
-    # ---------------- DEFAULT SETTINGS ----------------
     c.execute("""
         INSERT OR IGNORE INTO settings
-        VALUES (
-            1,
-            'Excellence Through Practical Teaching',
-            '26876783891',
-            'takernkambule@gmail.com',
-            '',
-            'Plot 92, Trelawney Park, Manzini'
-        )
+        VALUES (1,
+        'Excellence Through Practical Automotive Training',
+        '26876783891',
+        'youremail@gmail.com',
+        'Heavy Plant,Light Motor,Welding')
     """)
 
     conn.commit()
     conn.close()
 
 init_db()
-# ---------------- FILE SAVE ----------------
+
+ADMIN_PASSWORD = "1234"
+
+# ---------------- SETTINGS ----------------
+def get_settings():
+    conn = sqlite3.connect("students.db")
+    c = conn.cursor()
+    c.execute("SELECT hero, whatsapp, email, courses FROM settings WHERE id=1")
+    data = c.fetchone()
+    conn.close()
+    return data
+
+def update_settings(hero, whatsapp, email, courses):
+    conn = sqlite3.connect("students.db")
+    c = conn.cursor()
+    c.execute("UPDATE settings SET hero=?, whatsapp=?, email=?, courses=? WHERE id=1",
+              (hero, whatsapp, email, courses))
+    conn.commit()
+    conn.close()
+
+# ---------------- EMAIL ----------------
+def send_email(name, phone, course):
+    try:
+        sender = "yourgmail@gmail.com"
+        password = "your_app_password"
+        receiver = "yourgmail@gmail.com"
+
+        msg = f"Subject: New Application\n\n{name} applied for {course}\nPhone: {phone}"
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender, password)
+        server.sendmail(sender, receiver, msg)
+        server.quit()
+    except:
+        print("Email failed")
+
+# ---------------- WHATSAPP (META API READY) ----------------
+def send_whatsapp_api(phone, name, course):
+    """
+    REAL WhatsApp Cloud API READY STRUCTURE
+    You must add:
+    - TOKEN
+    - PHONE_ID
+    """
+    print(f"[WHATSAPP] Would send: {name} - {course}")
+    # Replace with real Meta API later
+
+# ---------------- SAVE FILE ----------------
 def save_file(file):
     if file:
-        path = os.path.join(UPLOAD_FOLDER, file.filename)
+        path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
         file.save(path)
         return file.filename
     return ""
 
-# ---------------- WHATSAPP (READY FOR API UPGRADE) ----------------
-def whatsapp_message(phone, name, course):
-    return f"New Application: {name} - {course} - {phone}"
-
-# ---------------- HTML ----------------
+# ---------------- FRONTEND (WORKSHOP STYLE UI) ----------------
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -89,121 +123,109 @@ HTML = """
 body{
     margin:0;
     font-family:Arial;
-    background:#0b0b0b;
     color:white;
+    background:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1500&q=80');
+    background-size:cover;
+    background-attachment:fixed;
 }
 
-/* HEADER */
+.overlay{background:rgba(0,0,0,0.8);min-height:100vh;}
+
 .nav{
     display:flex;
     justify-content:space-between;
     padding:15px;
-    background:#111;
+    background:rgba(0,0,0,0.7);
 }
-.nav a{
-    color:white;
-    margin:0 10px;
-    text-decoration:none;
-}
+
+.nav a{color:white;margin:0 10px;text-decoration:none;}
+
 .logo{color:#25D366;font-weight:bold;}
 
-/* HERO */
-.hero{
-    text-align:center;
-    padding:60px;
-    background:linear-gradient(135deg,#111,#2a0000);
-}
+.hero{text-align:center;padding:70px;}
+.hero h1{color:#25D366;font-size:45px;}
 
-/* CARDS */
-.container{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:20px;
-    padding:20px;
-}
+.container{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;padding:20px;}
+
 .card{
-    background:#1a1a1a;
+    background:rgba(20,20,20,0.9);
     padding:20px;
     width:300px;
-    border-radius:10px;
+    border-radius:12px;
 }
 
-/* INPUT */
-input,select{
+input,select,textarea{
+    width:90%;
     padding:10px;
     margin:5px;
-    width:250px;
 }
 
-/* BUTTON */
 .btn{
     background:#25D366;
     color:black;
     padding:10px;
-    display:inline-block;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
     text-decoration:none;
-    border-radius:5px;
+    display:inline-block;
 }
 </style>
 </head>
 
 <body>
+<div class="overlay">
 
 <div class="nav">
-    <div class="logo">🚗 Automotive Professionals</div>
-    <div>
-        <a href="/">Home</a>
-        <a href="/admin">Admin</a>
-    </div>
+<div class="logo">🚗 Automotive Professionals</div>
+<div>
+<a href="/">Home</a>
+<a href="/login">Admin</a>
+</div>
 </div>
 
 <div class="hero">
-    <h1>Excellence Through Practical Teaching</h1>
+<h1>Excellence Through Practical Training</h1>
 </div>
 
 <div class="container">
 
-<!-- STUDENT FORM -->
+<!-- APPLY -->
 <div class="card">
-<h2>Apply Now</h2>
+<h2>Apply</h2>
 
 <form method="POST" action="/apply" enctype="multipart/form-data">
 
-<input name="name" placeholder="Full Name" required><br>
-<input name="phone" placeholder="Phone" required><br>
-<input name="email" placeholder="Email" required><br>
+<input name="name" placeholder="Full Name" required>
+<input name="phone" placeholder="Phone" required>
+<input name="email" placeholder="Email">
 
 <select name="course">
 <option>Heavy Plant Mechanics</option>
 <option>Light Motor Mechanics</option>
 <option>Welding</option>
-</select><br>
+</select>
+
+<textarea name="message" placeholder="Message"></textarea>
 
 <p>ID Upload</p>
-<input type="file" name="id_file"><br>
+<input type="file" name="id_file">
 
 <p>CV Upload</p>
-<input type="file" name="cv_file"><br>
+<input type="file" name="cv_file">
 
-<p>Profile Image</p>
-<input type="file" name="image_file"><br>
+<p>Certificate Upload</p>
+<input type="file" name="cert_file">
 
-<button class="btn">Submit Application</button>
-
+<br><br>
+<button class="btn">Submit</button>
 </form>
-</div>
 
-<!-- COURSES -->
-<div class="card">
-<h2>Courses</h2>
-<p>Heavy Plant Mechanics</p>
-<p>Light Motor Mechanics</p>
-<p>Welding</p>
 </div>
 
 </div>
 
+</div>
 </body>
 </html>
 """
@@ -213,6 +235,10 @@ input,select{
 def home():
     return render_template_string(HTML)
 
+@app.route("/uploads/<filename>")
+def uploads(filename):
+    return send_from_directory("uploads", filename)
+
 # ---------------- APPLY ----------------
 @app.route("/apply", methods=["POST"])
 def apply():
@@ -220,44 +246,49 @@ def apply():
     phone = request.form["phone"]
     email = request.form["email"]
     course = request.form["course"]
+    message = request.form.get("message", "")
     date = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     id_file = save_file(request.files.get("id_file"))
     cv_file = save_file(request.files.get("cv_file"))
-    image_file = save_file(request.files.get("image_file"))
+    cert_file = save_file(request.files.get("cert_file"))
 
     conn = sqlite3.connect("students.db")
     c = conn.cursor()
     c.execute("""
-        INSERT INTO applications 
-        VALUES (NULL,?,?,?,?,?,?,?,?)
-    """, (name, phone, email, course, id_file, cv_file, image_file, date))
-
+        INSERT INTO applications
+        (name, phone, email, course, id_file, cv_file, cert_file, message, date)
+        VALUES (?,?,?,?,?,?,?,?,?)
+    """, (name, phone, email, course, id_file, cv_file, cert_file, message, date))
     conn.commit()
     conn.close()
 
-    msg = whatsapp_message(phone, name, course)
+    send_email(name, phone, course)
+    send_whatsapp_api(phone, name, course)
 
-    return f"""
-    <h2>Application Submitted ✅</h2>
-    <p>{msg}</p>
-    <a class="btn" href="/">Back</a>
+    return "<h2>Application Submitted Successfully ✅</h2><a href='/'>Back</a>"
+
+# ---------------- LOGIN ----------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form["password"] == ADMIN_PASSWORD:
+            session["admin"] = True
+            return redirect("/admin")
+        return "Wrong password"
+
+    return """
+    <form method='POST'>
+        <input name='password' placeholder='Admin Password'>
+        <button>Login</button>
+    </form>
     """
 
-# ---------------- ADMIN LOGIN ----------------
-@app.route("/admin", methods=["GET", "POST"])
+# ---------------- ADMIN ----------------
+@app.route("/admin")
 def admin():
     if not session.get("admin"):
-        if request.method == "POST":
-            if request.form["password"] == ADMIN_PASSWORD:
-                session["admin"] = True
-                return redirect("/admin")
-        return """
-        <form method='POST'>
-            <input name='password' placeholder='Password'>
-            <button>Login</button>
-        </form>
-        """
+        return redirect("/login")
 
     conn = sqlite3.connect("students.db")
     c = conn.cursor()
@@ -265,18 +296,21 @@ def admin():
     data = c.fetchall()
     conn.close()
 
-    html = "<h1>Admin Dashboard</h1>"
-
-    html += "<table border='1' style='width:100%;color:white;'>"
-    html += "<tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Course</th><th>ID</th><th>CV</th><th>Image</th><th>Date</th></tr>"
+    table = "<h1>Admin Dashboard</h1><table border='1' style='width:100%'>"
+    table += "<tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Course</th><th>Date</th></tr>"
 
     for row in data:
-        html += "<tr>" + "".join([f"<td>{i}</td>" for i in row]) + "</tr>"
+        table += "<tr>" + "".join([f"<td>{i}</td>" for i in row[:6]]) + "</tr>"
 
-    html += "</table>"
+    table += "</table>"
+    return table
 
-    return html
+# ---------------- LOGOUT ----------------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
