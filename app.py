@@ -10,6 +10,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 app = Flask(__name__)
 app.secret_key = "CHANGE_THIS_TO_RANDOM_SECURE_KEY"
 
@@ -82,10 +84,12 @@ def init():
     )
     """)
 
-    # ---------------- WORKSHOP JOB SYSTEM (NEW UPGRADE) ----------------
+    # ---------------- WORKSHOP JOBS (FULL ERP VERSION) ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS workshop_jobs(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        invoice_no TEXT,
 
         customer_name TEXT,
         phone TEXT,
@@ -97,7 +101,7 @@ def init():
         vin TEXT,
         mileage TEXT,
 
-        issue TEXT,
+        problem TEXT,
         diagnosis TEXT,
         repair_notes TEXT,
 
@@ -109,10 +113,10 @@ def init():
         amount_paid REAL,
 
         deadline TEXT,
-
         status TEXT,
 
-        date_received TEXT
+        date_received TEXT,
+        date_completed TEXT
     )
     """)
 
@@ -154,6 +158,7 @@ def init():
 
 
 init()
+
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -713,84 +718,85 @@ def apply():
     """
 
 
-@app.route("/admin/workshop")
-def workshop_dashboard():
+@app.route("/admin/workshop", methods=["GET", "POST"])
+def workshop():
 
     if not session.get("admin"):
         return redirect("/login")
 
     conn = db()
 
-    jobs = conn.execute("""
-        SELECT * FROM workshop_jobs ORDER BY id DESC
-    """).fetchall()
+    # ADD CAR / JOB
+    if request.method == "POST":
 
-    expenses = conn.execute("""
-        SELECT SUM(amount) as total FROM workshop_expenses
-    """).fetchone()["total"]
+        invoice = "INV" + datetime.now().strftime("%Y%m%d%H%M%S")
 
+        conn.execute("""
+            INSERT INTO workshop_jobs(
+                invoice_no, customer, phone, plate, vehicle, problem,
+                labor_cost, parts_cost, amount_paid, date_in, status
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            invoice,
+            request.form["customer"],
+            request.form["phone"],
+            request.form["plate"],
+            request.form["vehicle"],
+            request.form["problem"],
+            float(request.form["labor_cost"]),
+            float(request.form["parts_cost"]),
+            float(request.form["amount_paid"]),
+            datetime.now().strftime("%Y-%m-%d"),
+            "IN PROGRESS"
+        ))
+
+        conn.commit()
+
+    jobs = conn.execute("SELECT * FROM workshop_jobs ORDER BY id DESC").fetchall()
     conn.close()
 
-    expenses = expenses if expenses else 0
-
-    # FINANCIAL CALCULATION
-    total_income = 0
-    total_paid = 0
-    active_jobs = 0
-    overdue = 0
-
-    today = datetime.now().strftime("%Y-%m-%d")
-
-    for j in jobs:
-
-        total_income += (j["total_cost"] or 0)
-        total_paid += (j["amount_paid"] or 0)
-
-        if j["status"] != "COMPLETED":
-            active_jobs += 1
-
-        if j["deadline"] and j["deadline"] < today and j["status"] != "COMPLETED":
-            overdue += 1
-
-    profit = total_paid - expenses
-
     return render_template_string("""
-
     <style>
-
     body{
-        font-family:Arial;
-        background:#0b0b0b;
-        color:white;
         margin:0;
+        font-family:Arial;
+        background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
+        color:white;
     }
 
-    .container{
+    .overlay{
+        background:rgba(0,0,0,0.85);
+        min-height:100vh;
         padding:20px;
     }
 
-    .grid{
-        display:grid;
-        grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-        gap:15px;
-    }
-
     .card{
-        background:#151515;
+        background:rgba(20,20,20,0.9);
         padding:15px;
         border-radius:10px;
+        margin-bottom:15px;
+    }
+
+    input{
+        width:100%;
+        padding:10px;
+        margin:5px 0;
+        background:#111;
+        color:white;
         border:1px solid #333;
     }
 
-    .title{
-        color:#25D366;
+    button{
+        padding:10px;
+        background:#25D366;
+        border:none;
         font-weight:bold;
-        font-size:18px;
+        cursor:pointer;
     }
 
     table{
         width:100%;
-        margin-top:15px;
         border-collapse:collapse;
     }
 
@@ -800,85 +806,72 @@ def workshop_dashboard():
         font-size:12px;
     }
 
-    th{
-        background:#111;
+    th{background:#111;color:#25D366;}
+
+    .back{
+        display:inline-block;
+        margin-bottom:10px;
         color:#25D366;
+        text-decoration:none;
     }
-
-    .danger{color:red;}
-    .ok{color:lime;}
-
     </style>
 
-    <div class="container">
+    <div class="overlay">
 
-    <h2 class="title">🚗 Workshop Admin Dashboard</h2>
+    <a href="/admin" class="back">⬅ Back to Dashboard</a>
 
-    <!-- STATS -->
-    <div class="grid">
+    <div class="card">
+        <h2>🚗 Add Workshop Job</h2>
 
-        <div class="card">
-            💰 Profit<br>
-            <b>R {{profit}}</b>
-        </div>
+        <form method="POST">
 
-        <div class="card">
-            🚗 Active Jobs<br>
-            <b>{{active_jobs}}</b>
-        </div>
+            <input name="customer" placeholder="Customer Name" required>
+            <input name="phone" placeholder="Phone" required>
+            <input name="plate" placeholder="Plate Number" required>
+            <input name="vehicle" placeholder="Vehicle Model" required>
+            <input name="problem" placeholder="Problem Description" required>
 
-        <div class="card">
-            ⏰ Overdue Cars<br>
-            <b class="danger">{{overdue}}</b>
-        </div>
+            <input name="labor_cost" placeholder="Labor Cost" required>
+            <input name="parts_cost" placeholder="Parts Cost" required>
+            <input name="amount_paid" placeholder="Amount Paid" required>
 
-        <div class="card">
-            💵 Income<br>
-            <b>R {{total_paid}}</b>
-        </div>
+            <button>Add Job</button>
 
-        <div class="card">
-            🧾 Expenses<br>
-            <b>R {{expenses}}</b>
-        </div>
-
+        </form>
     </div>
 
-    <!-- JOB TABLE -->
     <div class="card">
 
-    <h3>🚘 Live Workshop Jobs</h3>
+    <h3>📋 Active Jobs</h3>
 
     <table>
-
         <tr>
+            <th>Invoice</th>
             <th>Customer</th>
             <th>Vehicle</th>
             <th>Plate</th>
-            <th>Status</th>
-            <th>Deadline</th>
             <th>Cost</th>
             <th>Paid</th>
             <th>Balance</th>
+            <th>Status</th>
         </tr>
 
         {% for j in jobs %}
 
         <tr>
+            <td>{{j.invoice_no}}</td>
+            <td>{{j.customer}}</td>
+            <td>{{j.vehicle}}</td>
+            <td>{{j.plate}}</td>
 
-            <td>{{j.customer_name}}</td>
-            <td>{{j.vehicle_model}}</td>
-            <td>{{j.registration}}</td>
-            <td>{{j.status}}</td>
-            <td>{{j.deadline}}</td>
-
-            <td>R {{j.total_cost}}</td>
+            <td>R {{j.labor_cost + j.parts_cost}}</td>
             <td>R {{j.amount_paid}}</td>
 
             <td>
-                R {{(j.total_cost or 0) - (j.amount_paid or 0)}}
+                R {{(j.labor_cost + j.parts_cost) - j.amount_paid}}
             </td>
 
+            <td>{{j.status}}</td>
         </tr>
 
         {% endfor %}
@@ -888,16 +881,7 @@ def workshop_dashboard():
     </div>
 
     </div>
-
-    """,
-    jobs=jobs,
-    expenses=expenses,
-    total_paid=total_paid,
-    total_income=total_income,
-    active_jobs=active_jobs,
-    overdue=overdue,
-    profit=profit
-    )
+    """, jobs=jobs)
 @app.route("/admin/workshop/jobcard", methods=["GET", "POST"])
 def create_jobcard():
 
@@ -1033,9 +1017,7 @@ def create_jobcard():
 
     """)
     
-    
-
-@app.route("/admin/invoice/<int:job_id>")
+  @app.route("/admin/invoice/<int:job_id>")
 def generate_invoice(job_id):
 
     if not session.get("admin"):
@@ -1050,27 +1032,46 @@ def generate_invoice(job_id):
     if not job:
         return "Job not found"
 
+    # 🔢 Invoice number
     invoice_number = f"INV-{job_id:05d}"
 
-    labor = job["labor_cost"]
-    parts = job["parts_cost"]
-    total = job["total_cost"]
-    paid = job["amount_paid"] if job["amount_paid"] else 0
+    # 💰 SAFE CALCULATION
+    labor = job["labor_cost"] or 0
+    parts = job["parts_cost"] or 0
+    paid = job["amount_paid"] or 0
+
+    total = labor + parts
     balance = total - paid
 
-    # save invoice record
+    # 🧾 Save invoice record (ensure table exists)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS invoices(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id INTEGER,
+            invoice_number TEXT,
+            customer_name TEXT,
+            plate TEXT,
+            labor REAL,
+            parts REAL,
+            total REAL,
+            paid REAL,
+            balance REAL,
+            date TEXT
+        )
+    """)
+
     conn.execute("""
         INSERT INTO invoices(
             job_id, invoice_number, customer_name,
-            registration, labor, parts, total,
+            plate, labor, parts, total,
             paid, balance, date
         )
         VALUES(?,?,?,?,?,?,?,?,?,?)
     """, (
         job_id,
         invoice_number,
-        job["customer_name"],
-        job["registration"],
+        job["customer"],
+        job["plate"],
         labor,
         parts,
         total,
@@ -1082,22 +1083,22 @@ def generate_invoice(job_id):
     conn.commit()
     conn.close()
 
-    # CREATE PDF
+    # 📄 PDF CREATION
     filename = f"{invoice_number}.pdf"
     filepath = os.path.join("uploads", filename)
 
     doc = SimpleDocTemplate(filepath, pagesize=A4)
     styles = getSampleStyleSheet()
-
     content = []
 
     content.append(Paragraph("AUTOMOTIVE WORKSHOP INVOICE", styles["Title"]))
     content.append(Spacer(1, 12))
 
     content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
-    content.append(Paragraph(f"Customer: {job['customer_name']}", styles["Normal"]))
-    content.append(Paragraph(f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}", styles["Normal"]))
-    content.append(Paragraph(f"Registration: {job['registration']}", styles["Normal"]))
+    content.append(Paragraph(f"Customer: {job['customer']}", styles["Normal"]))
+    content.append(Paragraph(f"Phone: {job['phone']}", styles["Normal"]))
+    content.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["Normal"]))
+    content.append(Paragraph(f"Plate: {job['plate']}", styles["Normal"]))
     content.append(Spacer(1, 12))
 
     content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
@@ -1106,9 +1107,14 @@ def generate_invoice(job_id):
     content.append(Paragraph(f"Paid: R {paid}", styles["Normal"]))
     content.append(Paragraph(f"Balance: R {balance}", styles["Normal"]))
 
+    content.append(Spacer(1, 12))
+    content.append(Paragraph("Thank you for choosing our workshop!", styles["Normal"]))
+
     doc.build(content)
 
     return send_from_directory("uploads", filename, as_attachment=True)
+
+
     
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
