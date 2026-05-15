@@ -117,7 +117,6 @@ def send_email(name, email, course):
     except:
         print("Email failed")
 
-
 # ---------------- UI (UPGRADED PROFESSIONAL FIXED) ----------------
 HTML = """
 <!DOCTYPE html>
@@ -379,7 +378,6 @@ margin-top:20px;
 </body>
 </html>
 """
-
 # ---------------- ROUTES ----------------
 @app.route("/")
 def home():
