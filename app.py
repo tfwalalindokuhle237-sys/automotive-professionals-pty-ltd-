@@ -1017,6 +1017,9 @@ def create_jobcard():
 
     """)
     
+    
+
+
 @app.route("/admin/invoice/<int:job_id>")
 def generate_invoice(job_id):
 
@@ -1032,10 +1035,8 @@ def generate_invoice(job_id):
     if not job:
         return "Job not found"
 
-    # 🔢 Invoice number
     invoice_number = f"INV-{job_id:05d}"
 
-    # 💰 SAFE CALCULATION
     labor = job["labor_cost"] or 0
     parts = job["parts_cost"] or 0
     paid = job["amount_paid"] or 0
@@ -1043,7 +1044,6 @@ def generate_invoice(job_id):
     total = labor + parts
     balance = total - paid
 
-    # 🧾 Save invoice record (ensure table exists)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS invoices(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1070,8 +1070,8 @@ def generate_invoice(job_id):
     """, (
         job_id,
         invoice_number,
-        job["customer"],
-        job["plate"],
+        job["customer_name"],
+        job["registration"],
         labor,
         parts,
         total,
@@ -1083,7 +1083,6 @@ def generate_invoice(job_id):
     conn.commit()
     conn.close()
 
-    # 📄 PDF CREATION
     filename = f"{invoice_number}.pdf"
     filepath = os.path.join("uploads", filename)
 
@@ -1095,10 +1094,14 @@ def generate_invoice(job_id):
     content.append(Spacer(1, 12))
 
     content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
-    content.append(Paragraph(f"Customer: {job['customer']}", styles["Normal"]))
+    content.append(Paragraph(f"Customer: {job['customer_name']}", styles["Normal"]))
     content.append(Paragraph(f"Phone: {job['phone']}", styles["Normal"]))
-    content.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["Normal"]))
-    content.append(Paragraph(f"Plate: {job['plate']}", styles["Normal"]))
+    content.append(Paragraph(
+        f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}",
+        styles["Normal"]
+    ))
+    content.append(Paragraph(f"Plate: {job['registration']}", styles["Normal"]))
+
     content.append(Spacer(1, 12))
 
     content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
@@ -1113,8 +1116,6 @@ def generate_invoice(job_id):
     doc.build(content)
 
     return send_from_directory("uploads", filename, as_attachment=True)
-
-
     
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
