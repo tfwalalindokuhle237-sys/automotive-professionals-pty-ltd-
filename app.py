@@ -1960,7 +1960,7 @@ def admin_students():
 
     """, students=student_data)
 
-app.route("/upload_logo", methods=["POST"])
+@app.route("/upload_logo", methods=["POST"])
 def upload_logo():
     if not session.get("admin"):
         return redirect("/login")
