@@ -58,6 +58,16 @@ def init():
     )
     """)
 
+    # PAYMENTS (NEW - FINANCE SYSTEM)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER,
+        amount REAL,
+        date TEXT
+    )
+    """)
+
     # INSTITUTION FILES
     c.execute("""
     CREATE TABLE IF NOT EXISTS files(
@@ -95,6 +105,7 @@ def init():
 
 
 init()
+
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -109,7 +120,27 @@ def save(file):
         return final
     return ""
 
+def get_student_finance(student_id):
+    conn = db()
 
+    student = conn.execute(
+        "SELECT * FROM students WHERE id=?",
+        (student_id,)
+    ).fetchone()
+
+    payments = conn.execute(
+        "SELECT SUM(amount) as total FROM payments WHERE student_id=?",
+        (student_id,)
+    ).fetchone()
+
+    conn.close()
+
+    paid = payments["total"] if payments["total"] else 0
+
+    return {
+        "student": student,
+        "paid": paid
+    }
 def get_settings():
     conn = db()
     data = conn.execute("SELECT * FROM settings WHERE id=1").fetchone()
@@ -634,7 +665,107 @@ def settings_page():
 
 
 # ---------------- FIXED ADMIN HTML (ADDED) ----------------
+ADMIN_LAYOUT = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>ERP Admin Panel</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
+color:white;
+}
+
+.overlay{
+display:flex;
+min-height:100vh;
+background:rgba(0,0,0,0.85);
+}
+
+/* SIDEBAR */
+.sidebar{
+width:220px;
+background:rgba(0,0,0,0.9);
+padding:20px;
+border-right:1px solid #333;
+}
+
+.sidebar h2{
+color:#25D366;
+}
+
+.sidebar a{
+display:block;
+color:white;
+padding:10px;
+text-decoration:none;
+margin:5px 0;
+border-radius:6px;
+background:#111;
+}
+
+.sidebar a:hover{
+background:#25D366;
+color:black;
+}
+
+/* MAIN */
+.main{
+flex:1;
+padding:20px;
+}
+
+/* CARDS */
+.card{
+background:rgba(20,20,20,0.9);
+padding:15px;
+margin-bottom:15px;
+border-radius:10px;
+border:1px solid #333;
+}
+
+.btn{
+background:#25D366;
+border:none;
+padding:10px;
+width:100%;
+cursor:pointer;
+font-weight:bold;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="overlay">
+
+    <div class="sidebar">
+        <h2>ERP MENU</h2>
+
+        <a href="/admin">📊 Dashboard</a>
+        <a href="/admin/students">👨‍🎓 Students</a>
+        <a href="/admin/fees">💰 Fees</a>
+        <a href="/admin/workshop">🚗 Workshop</a>
+        <a href="/admin/files">📁 Files</a>
+        <a href="/admin/reports">📄 Reports</a>
+        <a href="/logout">🚪 Logout</a>
+    </div>
+
+    <div class="main">
+        {{content}}
+    </div>
+
+</div>
+
+</body>
+</html>
+"""
 ADMIN_HTML = """
 <!DOCTYPE html>
 <html>
@@ -840,14 +971,147 @@ def admin():
 
     conn.close()
 
-    return render_template_string(
+    # 📊 SIMPLE STATS (for dashboard later)
+    stats = {
+        "applications": len(applications),
+        "students": len(students),
+        "files": len(files)
+    }
+
+    # RENDER INSIDE ERP LAYOUT
+    content = render_template_string(
         ADMIN_HTML,
         s=s,
         data=applications,
         students=students,
-        files=files
+        files=files,
+        stats=stats
     )
 
+    return render_template_string(
+        ADMIN_LAYOUT,
+        content=content
+    )
+
+@app.route("/admin/students", methods=["GET", "POST"])
+def admin_students():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    # ADD STUDENT
+    if request.method == "POST":
+        conn.execute("""
+            INSERT INTO students(name, phone, email, course, status, date)
+            VALUES(?,?,?,?,?,?)
+        """, (
+            request.form["name"],
+            request.form["phone"],
+            request.form["email"],
+            request.form["course"],
+            request.form["tuition"],  # store tuition here temporarily
+            datetime.now().strftime("%Y-%m-%d")
+        ))
+        conn.commit()
+
+    # GET STUDENTS
+    students = conn.execute("""
+        SELECT * FROM students ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    # BUILD FINANCIAL DATA
+    student_data = []
+
+    for s in students:
+        conn = db()
+
+        paid = conn.execute("""
+            SELECT SUM(amount) as total FROM payments WHERE student_id=?
+        """, (s["id"],)).fetchone()["total"]
+
+        conn.close()
+
+        paid = paid if paid else 0
+
+        # we store tuition inside status temporarily (simple fix for now)
+        try:
+            tuition = float(s["status"])
+        except:
+            tuition = 0
+
+        balance = tuition - paid
+
+        student_data.append({
+            "id": s["id"],
+            "name": s["name"],
+            "phone": s["phone"],
+            "email": s["email"],
+            "course": s["course"],
+            "tuition": tuition,
+            "paid": paid,
+            "balance": balance,
+            "date": s["date"]
+        })
+
+    return render_template_string("""
+    <h2>Student Finance System</h2>
+
+    <form method="POST">
+        <input name="name" placeholder="Student Name" required>
+        <input name="phone" placeholder="Phone" required>
+        <input name="email" placeholder="Email" required>
+
+        <input name="course" placeholder="Course" required>
+        <input name="tuition" placeholder="Total Tuition" required>
+
+        <button>Add Student</button>
+    </form>
+
+    <hr>
+
+    <h3>Students Finance Overview</h3>
+
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Name</th>
+            <th>Course</th>
+            <th>Tuition</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+
+        {% for s in students %}
+        <tr>
+            <td>{{s.name}}</td>
+            <td>{{s.course}}</td>
+            <td>{{s.tuition}}</td>
+            <td>{{s.paid}}</td>
+            <td>{{s.balance}}</td>
+
+            <td>
+                {% if s.balance > 0 %}
+                    <span style="color:red;">OVERDUE</span>
+                {% else %}
+                    <span style="color:lime;">PAID</span>
+                {% endif %}
+            </td>
+
+            <td>
+                <form method="POST" action="/admin/pay/{{s.id}}">
+                    <input name="amount" placeholder="Pay amount" style="width:100px;">
+                    <button>Add</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    """, students=student_data)
 @app.route("/upload_logo", methods=["POST"])
 def upload_logo():
     if not session.get("admin"):
@@ -863,7 +1127,27 @@ def upload_logo():
 
     return redirect("/admin")
 
+@app.route("/admin/pay/<int:student_id>", methods=["POST"])
+def add_payment(student_id):
 
+    if not session.get("admin"):
+        return redirect("/login")
+
+    amount = float(request.form["amount"])
+
+    conn = db()
+    conn.execute("""
+        INSERT INTO payments(student_id, amount, date)
+        VALUES(?,?,?)
+    """, (
+        student_id,
+        amount,
+        datetime.now().strftime("%Y-%m-%d")
+    ))
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin/students")
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
