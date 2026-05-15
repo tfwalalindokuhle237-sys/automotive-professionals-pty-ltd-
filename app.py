@@ -152,12 +152,12 @@ body{
 margin:0;
 font-family:Segoe UI, Arial;
 color:white;
-background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
+background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
 }
 
 /* DARK OVERLAY */
 .overlay{
-background:rgba(0,0,0,0.82);
+background:rgba(0,0,0,0.88);
 min-height:100vh;
 }
 
@@ -173,12 +173,6 @@ backdrop-filter:blur(8px);
 position:sticky;
 top:0;
 z-index:100;
-}
-
-.nav-left{
-display:flex;
-align-items:center;
-gap:10px;
 }
 
 .logo{
@@ -204,14 +198,14 @@ color:#25D366;
 /* HERO */
 .hero{
 text-align:center;
-padding:80px 20px 40px;
+padding:70px 20px 30px;
 }
 
 .hero-box{
 display:inline-block;
 padding:25px 35px;
 border-radius:15px;
-background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.65);
 border:1px solid #333;
 backdrop-filter:blur(8px);
 }
@@ -227,6 +221,18 @@ margin-top:10px;
 opacity:0.8;
 }
 
+/* DASHBOARD MINI BADGE */
+.badge{
+display:inline-block;
+margin-top:10px;
+padding:6px 12px;
+font-size:12px;
+background:#25D366;
+color:black;
+border-radius:20px;
+font-weight:bold;
+}
+
 /* MAIN */
 .container{
 display:flex;
@@ -238,7 +244,7 @@ padding:30px;
 
 /* CARD */
 .card{
-background:rgba(20,20,20,0.85);
+background:rgba(20,20,20,0.88);
 padding:22px;
 width:340px;
 border-radius:15px;
@@ -293,24 +299,16 @@ border-radius:5px;
 font-size:14px;
 }
 
-/* PROFILE SLOT */
-.slot{
-text-align:center;
-padding:15px;
-border:1px dashed #444;
-margin-bottom:10px;
-color:#aaa;
-border-radius:10px;
-}
-
 /* FOOTER */
 footer{
 text-align:center;
-padding:20px;
-opacity:0.6;
+padding:25px;
+opacity:0.7;
 font-size:13px;
 margin-top:20px;
+border-top:1px solid #222;
 }
+
 </style>
 </head>
 
@@ -319,7 +317,6 @@ margin-top:20px;
 <div class="overlay">
 
 <!-- NAV -->
-
 <div class="nav">
 
     <div style="display:flex;align-items:center;gap:10px;">
@@ -344,11 +341,16 @@ margin-top:20px;
     </div>
 
 </div>
+
 <!-- HERO -->
 <div class="hero">
     <div class="hero-box">
         <h1>{{h}}</h1>
         <p>Excellence Through Practical Teaching</p>
+
+        {% if session.admin %}
+        <div class="badge">ADMIN MODE ACTIVE</div>
+        {% endif %}
     </div>
 </div>
 
@@ -360,8 +362,9 @@ margin-top:20px;
 
         <h3>Student Application</h3>
 
-        <div class="slot">
-            Welcome To Automotive Professionals,continue below to proceed  with your registrations, all the best :)
+        <div class="slot" style="opacity:0.8">
+            Welcome To Automotive Professionals.<br>
+            Register below to join our institution.
         </div>
 
         <form method="POST" action="/apply" enctype="multipart/form-data">
@@ -397,30 +400,19 @@ margin-top:20px;
 </div>
 
 <footer>
-    © 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
 
-    <br><br>
+© 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
 
-    <div style="display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:wrap;">
+<br><br>
 
-        <!-- FACEBOOK -->
-        <a href="https://facebook.com" target="_blank"
-        style="color:white;text-decoration:none;font-size:15px;">
-            📘 Automotive Professionals Pty Ltd
-        </a>
+<div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
 
-        <!-- WHATSAPP -->
-        <a href="https://wa.me/26876783891" target="_blank"
-        style="color:#25D366;text-decoration:none;font-size:15px;">
-            💬 WhatsApp
-        </a>
+    <a href="https://facebook.com" style="color:white;text-decoration:none;">📘 Facebook</a>
+    <a href="https://wa.me/26876783891" style="color:#25D366;text-decoration:none;">💬 WhatsApp</a>
+    <span>📞 +268 7678 3891</span>
 
-        <!-- PHONE -->
-        <span style="font-size:15px;">
-            📞 +268 7678 3891
-        </span>
+</div>
 
-    </div>
 </footer>
 
 </div>
@@ -466,6 +458,40 @@ def upload_file():
         ))
         conn.commit()
         conn.close()
+
+    return redirect("/admin")
+
+@app.route("/promote", methods=["POST"])
+def promote():
+    if not session.get("admin"):
+        return redirect("/login")
+
+    app_id = request.form["id"]
+
+    conn = db()
+
+    app_data = conn.execute(
+        "SELECT * FROM applications WHERE id=?",
+        (app_id,)
+    ).fetchone()
+
+    if app_data:
+        conn.execute("""
+            INSERT INTO students(name, phone, email, course, status, date)
+            VALUES(?,?,?,?,?,?)
+        """, (
+            app_data["name"],
+            app_data["phone"],
+            app_data["email"],
+            app_data["course"],
+            "Active",
+            datetime.now().strftime("%Y-%m-%d %H:%M")
+        ))
+
+        conn.execute("DELETE FROM applications WHERE id=?", (app_id,))
+
+    conn.commit()
+    conn.close()
 
     return redirect("/admin")
 
@@ -714,6 +740,7 @@ border:1px solid #333;
 </body>
 </html>
 """
+
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
 
@@ -722,6 +749,7 @@ def admin():
 
     s = get_settings()
 
+    # UPDATE SETTINGS
     if request.method == "POST":
         conn = db()
         conn.execute("""
@@ -735,17 +763,34 @@ def admin():
         ))
         conn.commit()
         conn.close()
-
         return redirect("/admin")
 
     conn = db()
-    data = conn.execute("""
+
+    # APPLICATIONS
+    applications = conn.execute("""
         SELECT * FROM applications ORDER BY id DESC
     """).fetchall()
+
+    # STUDENTS
+    students = conn.execute("""
+        SELECT * FROM students ORDER BY id DESC
+    """).fetchall()
+
+    # FILES
+    files = conn.execute("""
+        SELECT * FROM files ORDER BY id DESC
+    """).fetchall()
+
     conn.close()
 
-    return render_template_string(ADMIN_HTML, s=s, data=data)
-
+    return render_template_string(
+        ADMIN_HTML,
+        s=s,
+        data=applications,
+        students=students,
+        files=files
+    )
 
 @app.route("/upload_logo", methods=["POST"])
 def upload_logo():
