@@ -14,55 +14,58 @@ def init_db():
     conn = sqlite3.connect("students.db")
     c = conn.cursor()
 
+    # ---------------- STUDENTS TABLE ----------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS applications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            phone TEXT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
             email TEXT,
-            course TEXT,
+            course TEXT NOT NULL,
+
             id_file TEXT,
             cv_file TEXT,
             image_file TEXT,
-            date TEXT
+
+            message TEXT,
+
+            status TEXT DEFAULT 'NEW',
+
+            date TEXT NOT NULL
         )
     """)
 
+    # ---------------- SETTINGS TABLE ----------------
     c.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             id INTEGER PRIMARY KEY,
+
             hero TEXT,
             whatsapp TEXT,
-            logo TEXT
+            email TEXT,
+            logo TEXT,
+
+            address TEXT
         )
     """)
 
-    c.execute("INSERT OR IGNORE INTO settings VALUES (1,'Excellence Through Practical Teaching','26876783891','')")
+    # ---------------- DEFAULT SETTINGS ----------------
+    c.execute("""
+        INSERT OR IGNORE INTO settings
+        VALUES (
+            1,
+            'Excellence Through Practical Teaching',
+            '26876783891',
+            'takernkambule@gmail.com',
+            '',
+            'Plot 92, Trelawney Park, Manzini'
+        )
+    """)
 
     conn.commit()
     conn.close()
 
 init_db()
-
-ADMIN_PASSWORD = "1234"
-
-# ---------------- SETTINGS ----------------
-def get_settings():
-    conn = sqlite3.connect("students.db")
-    c = conn.cursor()
-    c.execute("SELECT hero, whatsapp, logo FROM settings WHERE id=1")
-    data = c.fetchone()
-    conn.close()
-    return data
-
-def update_settings(hero, whatsapp, logo):
-    conn = sqlite3.connect("students.db")
-    c = conn.cursor()
-    c.execute("UPDATE settings SET hero=?, whatsapp=?, logo=? WHERE id=1",
-              (hero, whatsapp, logo))
-    conn.commit()
-    conn.close()
-
 # ---------------- FILE SAVE ----------------
 def save_file(file):
     if file:
