@@ -1024,7 +1024,7 @@ def create_jobcard():
 
 
 @app.route("/admin/invoice/<int:job_id>")
-def generate_invoice(job_id):
+def _invoice(job_id):
 
     if not session.get("admin"):
         return redirect("/login")
