@@ -7,7 +7,9 @@ import smtplib
 from werkzeug.utils import secure_filename
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
 app = Flask(__name__)
 app.secret_key = "CHANGE_THIS_TO_RANDOM_SECURE_KEY"
 
@@ -34,7 +36,7 @@ def init():
     conn = db()
     c = conn.cursor()
 
-    # applications
+    # ---------------- APPLICATIONS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS applications(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +49,7 @@ def init():
     )
     """)
 
-    # REGISTERED STUDENTS
+    # ---------------- STUDENTS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS students(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +62,7 @@ def init():
     )
     """)
 
-    # PAYMENTS (NEW - FINANCE SYSTEM)
+    # ---------------- PAYMENTS (STUDENT FINANCE) ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS payments(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +72,7 @@ def init():
     )
     """)
 
-    # INSTITUTION FILES
+    # ---------------- INSTITUTION FILES ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS files(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +82,52 @@ def init():
     )
     """)
 
-    # settings (LIVE editable later in admin)
+    # ---------------- WORKSHOP JOB SYSTEM (NEW UPGRADE) ----------------
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS workshop_jobs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        customer_name TEXT,
+        phone TEXT,
+        address TEXT,
+
+        vehicle_make TEXT,
+        vehicle_model TEXT,
+        registration TEXT,
+        vin TEXT,
+        mileage TEXT,
+
+        issue TEXT,
+        diagnosis TEXT,
+        repair_notes TEXT,
+
+        assigned_mechanic TEXT,
+
+        labor_cost REAL,
+        parts_cost REAL,
+        total_cost REAL,
+        amount_paid REAL,
+
+        deadline TEXT,
+
+        status TEXT,
+
+        date_received TEXT
+    )
+    """)
+
+    # ---------------- WORKSHOP EXPENSES / WALLET ----------------
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS workshop_expenses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item TEXT,
+        amount REAL,
+        description TEXT,
+        date TEXT
+    )
+    """)
+
+    # ---------------- SETTINGS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings(
         id INTEGER PRIMARY KEY,
@@ -91,7 +138,7 @@ def init():
     )
     """)
 
-    # DEFAULT DATA (YOUR UPDATED STRUCTURE)
+    # ---------------- DEFAULT DATA ----------------
     c.execute("""
     INSERT OR IGNORE INTO settings VALUES (
         1,
@@ -107,7 +154,6 @@ def init():
 
 
 init()
-
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -509,6 +555,43 @@ border-top:1px solid #222;
 </body>
 </html>
 """
+def workshop_wallet():
+
+    conn = db()
+
+    # TOTAL PAID
+    income = conn.execute("""
+        SELECT SUM(amount_paid) as total FROM workshop_jobs
+    """).fetchone()["total"] or 0
+
+    # TOTAL OUTSTANDING
+    debt = conn.execute("""
+        SELECT SUM(total_cost - amount_paid) as total
+        FROM workshop_jobs
+    """).fetchone()["total"] or 0
+
+    # ACTIVE JOBS
+    active = conn.execute("""
+        SELECT COUNT(*) as c FROM workshop_jobs
+        WHERE status='IN PROGRESS'
+    """).fetchone()["c"]
+
+    # OVERDUE JOBS
+    overdue = conn.execute("""
+        SELECT COUNT(*) as c FROM workshop_jobs
+        WHERE date(deadline) < date('now')
+        AND status != 'COMPLETED'
+    """).fetchone()["c"]
+
+    conn.close()
+
+    return {
+        "income": income,
+        "debt": debt,
+        "active": active,
+        "overdue": overdue
+    }
+
 # ---------------- ROUTES ----------------
 
 def get_settings():
@@ -629,7 +712,541 @@ def apply():
     <a href='/'>Back Home</a>
     """
 
+@app.route("/admin/workshop_dashboard")
+def workshop_dashboard():
 
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    jobs = conn.execute("""
+        SELECT * FROM workshop_jobs ORDER BY id DESC
+    """).fetchall()
+
+    expenses = conn.execute("""
+        SELECT SUM(amount) as total FROM workshop_expenses
+    """).fetchone()["total"]
+
+    conn.close()
+
+    expenses = expenses if expenses else 0
+
+    # FINANCIAL CALCULATION
+    total_income = 0
+    total_paid = 0
+    active_jobs = 0
+    overdue = 0
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    for j in jobs:
+
+        total_income += (j["total_cost"] or 0)
+        total_paid += (j["amount_paid"] or 0)
+
+        if j["status"] != "COMPLETED":
+            active_jobs += 1
+
+        if j["deadline"] and j["deadline"] < today and j["status"] != "COMPLETED":
+            overdue += 1
+
+    profit = total_paid - expenses
+
+    return render_template_string("""
+
+    <style>
+
+    body{
+        font-family:Arial;
+        background:#0b0b0b;
+        color:white;
+        margin:0;
+    }
+
+    .container{
+        padding:20px;
+    }
+
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+        gap:15px;
+    }
+
+    .card{
+        background:#151515;
+        padding:15px;
+        border-radius:10px;
+        border:1px solid #333;
+    }
+
+    .title{
+        color:#25D366;
+        font-weight:bold;
+        font-size:18px;
+    }
+
+    table{
+        width:100%;
+        margin-top:15px;
+        border-collapse:collapse;
+    }
+
+    th,td{
+        border:1px solid #333;
+        padding:8px;
+        font-size:12px;
+    }
+
+    th{
+        background:#111;
+        color:#25D366;
+    }
+
+    .danger{color:red;}
+    .ok{color:lime;}
+
+    </style>
+
+    <div class="container">
+
+    <h2 class="title">🚗 Workshop Admin Dashboard</h2>
+
+    <!-- STATS -->
+    <div class="grid">
+
+        <div class="card">
+            💰 Profit<br>
+            <b>R {{profit}}</b>
+        </div>
+
+        <div class="card">
+            🚗 Active Jobs<br>
+            <b>{{active_jobs}}</b>
+        </div>
+
+        <div class="card">
+            ⏰ Overdue Cars<br>
+            <b class="danger">{{overdue}}</b>
+        </div>
+
+        <div class="card">
+            💵 Income<br>
+            <b>R {{total_paid}}</b>
+        </div>
+
+        <div class="card">
+            🧾 Expenses<br>
+            <b>R {{expenses}}</b>
+        </div>
+
+    </div>
+
+    <!-- JOB TABLE -->
+    <div class="card">
+
+    <h3>🚘 Live Workshop Jobs</h3>
+
+    <table>
+
+        <tr>
+            <th>Customer</th>
+            <th>Vehicle</th>
+            <th>Plate</th>
+            <th>Status</th>
+            <th>Deadline</th>
+            <th>Cost</th>
+            <th>Paid</th>
+            <th>Balance</th>
+        </tr>
+
+        {% for j in jobs %}
+
+        <tr>
+
+            <td>{{j.customer_name}}</td>
+            <td>{{j.vehicle_model}}</td>
+            <td>{{j.registration}}</td>
+            <td>{{j.status}}</td>
+            <td>{{j.deadline}}</td>
+
+            <td>R {{j.total_cost}}</td>
+            <td>R {{j.amount_paid}}</td>
+
+            <td>
+                R {{(j.total_cost or 0) - (j.amount_paid or 0)}}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    </div>
+
+    </div>
+
+    """,
+    jobs=jobs,
+    expenses=expenses,
+    total_paid=total_paid,
+    total_income=total_income,
+    active_jobs=active_jobs,
+    overdue=overdue,
+    profit=profit
+    )
+@app.route("/admin/workshop/jobcard", methods=["GET", "POST"])
+def create_jobcard():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    # CREATE JOB CARD
+    if request.method == "POST":
+
+        labor = float(request.form.get("labor_cost") or 0)
+        parts = float(request.form.get("parts_cost") or 0)
+
+        total = labor + parts
+
+        conn.execute("""
+            INSERT INTO workshop_jobs(
+                customer_name,
+                phone,
+                address,
+                vehicle_make,
+                vehicle_model,
+                registration,
+                vin,
+                mileage,
+                issue,
+                diagnosis,
+                repair_notes,
+                assigned_mechanic,
+                labor_cost,
+                parts_cost,
+                total_cost,
+                amount_paid,
+                deadline,
+                status,
+                date_received
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (
+            request.form["customer_name"],
+            request.form["phone"],
+            request.form["address"],
+            request.form["vehicle_make"],
+            request.form["vehicle_model"],
+            request.form["registration"],
+            request.form["vin"],
+            request.form["mileage"],
+            request.form["issue"],
+            "",
+            "",
+            request.form["mechanic"],
+            labor,
+            parts,
+            total,
+            0,
+            request.form["deadline"],
+            "IN PROGRESS",
+            datetime.now().strftime("%Y-%m-%d")
+        ))
+
+        conn.commit()
+        return redirect("/admin/workshop_dashboard")
+
+    return render_template_string("""
+
+    <style>
+
+    body{
+        font-family:Arial;
+        background:#0b0b0b;
+        color:white;
+        margin:0;
+    }
+
+    .card{
+        background:#151515;
+        padding:20px;
+        margin:20px;
+        border-radius:10px;
+        border:1px solid #333;
+    }
+
+    input,textarea{
+        width:100%;
+        padding:10px;
+        margin:6px 0;
+        background:#111;
+        color:white;
+        border:1px solid #333;
+    }
+
+    button{
+        background:#25D366;
+        padding:12px;
+        border:none;
+        font-weight:bold;
+        cursor:pointer;
+    }
+
+    </style>
+
+    <div class="card">
+
+    <h2>🔧 Create Workshop Job Card</h2>
+
+    <form method="POST">
+
+        <input name="customer_name" placeholder="Customer Name" required>
+        <input name="phone" placeholder="Phone Number" required>
+        <input name="address" placeholder="Address">
+
+        <input name="vehicle_make" placeholder="Vehicle Make (Toyota, BMW...)">
+        <input name="vehicle_model" placeholder="Vehicle Model">
+        <input name="registration" placeholder="Plate Number" required>
+        <input name="vin" placeholder="VIN Number">
+        <input name="mileage" placeholder="Mileage">
+
+        <textarea name="issue" placeholder="Problem Description"></textarea>
+
+        <input name="mechanic" placeholder="Assign Mechanic">
+
+        <input name="labor_cost" placeholder="Labor Cost (R)">
+        <input name="parts_cost" placeholder="Parts Cost (R)">
+
+        <input name="deadline" type="date">
+
+        <button>Create Job Card</button>
+
+    </form>
+
+    </div>
+
+    """)
+    
+    
+@app.route("/admin/workshop_dashboard")
+def workshop_dashboard():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    jobs = conn.execute("""
+        SELECT * FROM workshop_jobs ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    wallet = workshop_wallet()
+
+    return render_template_string("""
+    <html>
+    <head>
+    <title>Workshop Dashboard</title>
+
+    <style>
+    body{
+        margin:0;
+        font-family:Arial;
+        background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
+        color:white;
+    }
+
+    .overlay{
+        background:rgba(0,0,0,0.88);
+        min-height:100vh;
+        padding:20px;
+    }
+
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+        gap:15px;
+    }
+
+    .card{
+        background:#111;
+        padding:15px;
+        border-radius:10px;
+        border:1px solid #333;
+        text-align:center;
+    }
+
+    .num{
+        font-size:22px;
+        color:#25D366;
+        font-weight:bold;
+    }
+
+    table{
+        width:100%;
+        margin-top:20px;
+        border-collapse:collapse;
+    }
+
+    th,td{
+        border:1px solid #333;
+        padding:8px;
+        font-size:13px;
+    }
+
+    th{
+        background:#000;
+        color:#25D366;
+    }
+
+    </style>
+    </head>
+
+    <body>
+
+    <div class="overlay">
+
+    <h2>🔧 Workshop Dashboard</h2>
+
+    <!-- STATS -->
+    <div class="grid">
+
+        <div class="card">
+            <div class="num">R {{wallet['income']}}</div>
+            <div>Income</div>
+        </div>
+
+        <div class="card">
+            <div class="num">R {{wallet['debt']}}</div>
+            <div>Outstanding</div>
+        </div>
+
+        <div class="card">
+            <div class="num">{{wallet['active']}}</div>
+            <div>Active Jobs</div>
+        </div>
+
+        <div class="card">
+            <div class="num">{{wallet['overdue']}}</div>
+            <div>Overdue Jobs</div>
+        </div>
+
+    </div>
+
+    <!-- JOB TABLE -->
+    <table>
+        <tr>
+            <th>Customer</th>
+            <th>Vehicle</th>
+            <th>Reg</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Paid</th>
+            <th>Balance</th>
+            <th>Invoice</th>
+        </tr>
+
+        {% for j in jobs %}
+        <tr>
+            <td>{{j.customer_name}}</td>
+            <td>{{j.vehicle_make}} {{j.vehicle_model}}</td>
+            <td>{{j.registration}}</td>
+            <td>{{j.status}}</td>
+            <td>R {{j.total_cost}}</td>
+            <td>R {{j.amount_paid}}</td>
+            <td>R {{j.total_cost - j.amount_paid}}</td>
+            <td><a href="/admin/invoice/{{j.id}}" style="color:#25D366;">PDF</a></td>
+        </tr>
+        {% endfor %}
+
+    </table>
+
+    </div>
+
+    </body>
+    </html>
+    """, jobs=jobs, wallet=wallet)
+@app.route("/admin/invoice/<int:job_id>")
+def generate_invoice(job_id):
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    job = conn.execute("""
+        SELECT * FROM workshop_jobs WHERE id=?
+    """, (job_id,)).fetchone()
+
+    if not job:
+        return "Job not found"
+
+    invoice_number = f"INV-{job_id:05d}"
+
+    labor = job["labor_cost"]
+    parts = job["parts_cost"]
+    total = job["total_cost"]
+    paid = job["amount_paid"] if job["amount_paid"] else 0
+    balance = total - paid
+
+    # save invoice record
+    conn.execute("""
+        INSERT INTO invoices(
+            job_id, invoice_number, customer_name,
+            registration, labor, parts, total,
+            paid, balance, date
+        )
+        VALUES(?,?,?,?,?,?,?,?,?,?)
+    """, (
+        job_id,
+        invoice_number,
+        job["customer_name"],
+        job["registration"],
+        labor,
+        parts,
+        total,
+        paid,
+        balance,
+        datetime.now().strftime("%Y-%m-%d")
+    ))
+
+    conn.commit()
+    conn.close()
+
+    # CREATE PDF
+    filename = f"{invoice_number}.pdf"
+    filepath = os.path.join("uploads", filename)
+
+    doc = SimpleDocTemplate(filepath, pagesize=A4)
+    styles = getSampleStyleSheet()
+
+    content = []
+
+    content.append(Paragraph("AUTOMOTIVE WORKSHOP INVOICE", styles["Title"]))
+    content.append(Spacer(1, 12))
+
+    content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
+    content.append(Paragraph(f"Customer: {job['customer_name']}", styles["Normal"]))
+    content.append(Paragraph(f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}", styles["Normal"]))
+    content.append(Paragraph(f"Registration: {job['registration']}", styles["Normal"]))
+    content.append(Spacer(1, 12))
+
+    content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
+    content.append(Paragraph(f"Parts Cost: R {parts}", styles["Normal"]))
+    content.append(Paragraph(f"TOTAL: R {total}", styles["Normal"]))
+    content.append(Paragraph(f"Paid: R {paid}", styles["Normal"]))
+    content.append(Paragraph(f"Balance: R {balance}", styles["Normal"]))
+
+    doc.build(content)
+
+    return send_from_directory("uploads", filename, as_attachment=True)
+    
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
