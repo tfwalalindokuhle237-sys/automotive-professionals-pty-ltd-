@@ -118,23 +118,26 @@ def send_email(name, email, course):
         print("Email failed")
 
 
-# ---------------- UI (UPGRADED PROFESSIONAL) ----------------
+# ---------------- UI (UPGRADED PROFESSIONAL FIXED) ----------------
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
 <title>Automotive Professionals Pty Ltd</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body{
 margin:0;
-font-family:Segoe UI;
+font-family:Segoe UI, Arial;
 color:white;
 background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
 }
 
+/* DARK OVERLAY */
 .overlay{
-background:rgba(0,0,0,0.8);
+background:rgba(0,0,0,0.82);
 min-height:100vh;
 }
 
@@ -146,78 +149,128 @@ align-items:center;
 padding:15px 25px;
 background:rgba(0,0,0,0.85);
 border-bottom:1px solid #333;
+backdrop-filter:blur(8px);
+position:sticky;
+top:0;
+z-index:100;
 }
 
-.nav a{
-color:white;
-margin:0 10px;
-text-decoration:none;
+.nav-left{
+display:flex;
+align-items:center;
+gap:10px;
 }
 
 .logo{
 width:45px;
 height:45px;
 border-radius:50%;
-background:#222;
+object-fit:cover;
 border:2px solid #25D366;
+background:#222;
+}
+
+.nav a{
+color:white;
+margin:0 10px;
+text-decoration:none;
+font-weight:500;
+}
+
+.nav a:hover{
+color:#25D366;
 }
 
 /* HERO */
 .hero{
 text-align:center;
-padding:70px 20px;
+padding:80px 20px 40px;
+}
+
+.hero-box{
+display:inline-block;
+padding:25px 35px;
+border-radius:15px;
+background:rgba(0,0,0,0.6);
+border:1px solid #333;
+backdrop-filter:blur(8px);
 }
 
 .hero h1{
+margin:0;
 color:#25D366;
 font-size:42px;
-margin:0;
 }
 
-/* LAYOUT */
+.hero p{
+margin-top:10px;
+opacity:0.8;
+}
+
+/* MAIN */
 .container{
 display:flex;
 justify-content:center;
 flex-wrap:wrap;
-gap:20px;
+gap:25px;
 padding:30px;
 }
 
 /* CARD */
 .card{
 background:rgba(20,20,20,0.85);
-padding:20px;
-width:320px;
-border-radius:12px;
+padding:22px;
+width:340px;
+border-radius:15px;
 border:1px solid #333;
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-6px);
+border-color:#25D366;
 }
 
 /* INPUT */
 input,select{
 width:100%;
 padding:10px;
-margin:6px 0;
+margin:8px 0;
 background:#111;
 color:white;
 border:1px solid #333;
+border-radius:6px;
+}
+
+input:focus,select:focus{
+border-color:#25D366;
+outline:none;
 }
 
 /* BUTTON */
 .btn{
 background:#25D366;
-padding:10px;
+padding:12px;
 width:100%;
 border:none;
 cursor:pointer;
 font-weight:bold;
+border-radius:6px;
+color:black;
 }
 
-/* COURSES */
+.btn:hover{
+background:#1fae55;
+}
+
+/* COURSE BLOCK */
 .course{
 background:#111;
-padding:8px;
-margin:5px 0;
+padding:10px;
+margin:6px 0;
 border-left:3px solid #25D366;
+border-radius:5px;
+font-size:14px;
 }
 
 /* PROFILE SLOT */
@@ -227,6 +280,16 @@ padding:15px;
 border:1px dashed #444;
 margin-bottom:10px;
 color:#aaa;
+border-radius:10px;
+}
+
+/* FOOTER */
+footer{
+text-align:center;
+padding:20px;
+opacity:0.6;
+font-size:13px;
+margin-top:20px;
 }
 </style>
 </head>
@@ -235,8 +298,10 @@ color:#aaa;
 
 <div class="overlay">
 
+<!-- NAV -->
 <div class="nav">
-    <div style="display:flex;align-items:center;gap:10px;">
+
+    <div class="nav-left">
         {% if logo %}
             <img src="/uploads/{{logo}}" class="logo">
         {% else %}
@@ -244,55 +309,76 @@ color:#aaa;
         {% endif %}
         <b>Automotive Professionals</b>
     </div>
-<div class="hero">
-    <h1>{{h}}</h1>
+
+    <div>
+        <a href="/">Home</a>
+        <a href="/admin">Admin</a>
+        <a href="/login">Login</a>
+    </div>
+
 </div>
 
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-box">
+        <h1>{{h}}</h1>
+        <p>Excellence Through Practical Automotive Training</p>
+    </div>
+</div>
+
+<!-- CONTENT -->
 <div class="container">
 
-<!-- APPLY -->
-<div class="card">
+    <!-- APPLY -->
+    <div class="card">
 
-<h3>Student Application</h3>
+        <h3>Student Application</h3>
 
-<div class="slot">Institution Logo (Admin Upload Later)</div>
+        <div class="slot">
+            Institution Logo (Admin Upload Panel)
+        </div>
 
-<form method="POST" action="/apply" enctype="multipart/form-data">
+        <form method="POST" action="/apply" enctype="multipart/form-data">
 
-<input name="name" placeholder="Full Name" required>
-<input name="phone" placeholder="Phone Number" required>
-<input name="email" placeholder="Email" required>
+            <input name="name" placeholder="Full Name" required>
+            <input name="phone" placeholder="Phone Number" required>
+            <input name="email" placeholder="Email Address" required>
 
-<select name="course">
-{% for c in courses %}
-<option>{{c}}</option>
-{% endfor %}
-</select>
+            <select name="course">
+                {% for c in courses %}
+                <option>{{c}}</option>
+                {% endfor %}
+            </select>
 
-<input type="file" name="file">
+            <input type="file" name="file">
 
-<button class="btn">Submit Application</button>
+            <button class="btn">Submit Application</button>
 
-</form>
+        </form>
+    </div>
+
+    <!-- COURSES -->
+    <div class="card">
+
+        <h3>Available Courses</h3>
+
+        {% for c in courses %}
+        <div class="course">{{c}}</div>
+        {% endfor %}
+
+    </div>
+
 </div>
 
-<!-- COURSES -->
-<div class="card">
-<h3>Courses</h3>
+<footer>
+© 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
+</footer>
 
-{% for c in courses %}
-<div class="course">{{c}}</div>
-{% endfor %}
-
-</div>
-
-</div>
 </div>
 
 </body>
 </html>
 """
-
 
 # ---------------- ROUTES ----------------
 @app.route("/")
