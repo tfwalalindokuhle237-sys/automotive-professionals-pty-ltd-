@@ -469,9 +469,8 @@ def apply():
     <h2 style='font-family:Arial'>Application Submitted ✅</h2>
     <a href='/'>Back Home</a>
     """
-
-
-@app.route("/settings", methods=["GET", "POST"])
+    
+    @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
         return redirect("/login")
@@ -479,16 +478,16 @@ def settings_page():
     s = get_settings()
 
     if request.method == "POST":
-        hero = request.form["hero"]
-        whatsapp = request.form["whatsapp"]
-        courses = request.form["courses"]
-
         conn = db()
         conn.execute("""
             UPDATE settings
             SET hero=?, whatsapp=?, courses=?
             WHERE id=1
-        """, (hero, whatsapp, courses))
+        """, (
+            request.form["hero"],
+            request.form["whatsapp"],
+            request.form["courses"]
+        ))
         conn.commit()
         conn.close()
 
@@ -498,412 +497,47 @@ def settings_page():
     <h2>Settings Panel</h2>
 
     <form method="POST">
-        <input name="hero" value="{{s.hero}}" placeholder="Hero Text">
-        <input name="whatsapp" value="{{s.whatsapp}}" placeholder="WhatsApp">
-        <textarea name="courses">{{s.courses}}</textarea>
+        <input name="hero" value="{{s['hero']}}">
+        <input name="whatsapp" value="{{s['whatsapp']}}">
+        <textarea name="courses">{{s['courses']}}</textarea>
 
         <button>Save</button>
     </form>
     """, s=s)
 
-return render_template_string("""
 
-<!DOCTYPE html>
-<html>
-<head>
-<title>Automotive Professionals Admin</title>
+@app.route("/admin", methods=["GET", "POST"])
+def admin():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    s = get_settings()
+
+    if request.method == "POST":
+        conn = db()
+        conn.execute("""
+            UPDATE settings
+            SET hero=?, whatsapp=?, courses=?
+            WHERE id=1
+        """, (
+            request.form["hero"],
+            request.form["whatsapp"],
+            request.form["courses"]
+        ))
+        conn.commit()
+        conn.close()
+
+        return redirect("/admin")
+
+    conn = db()
+    data = conn.execute("""
+        SELECT * FROM applications ORDER BY id DESC
+    """).fetchall()
+    conn.close()
+
+    return render_template_string(ADMIN_HTML, s=s, data=data)
 
-<style>
-
-body{
-margin:0;
-font-family:Segoe UI, Arial;
-background:
-linear-gradient(rgba(0,0,0,0.88),rgba(0,0,0,0.88)),
-url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1600') center/cover fixed;
-color:white;
-}
-
-/* TOPBAR */
-.topbar{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:18px 30px;
-background:rgba(0,0,0,0.85);
-border-bottom:2px solid #25D366;
-position:sticky;
-top:0;
-z-index:100;
-backdrop-filter:blur(10px);
-}
-
-.topbar h1{
-margin:0;
-font-size:24px;
-color:#25D366;
-}
-
-.topbar a{
-color:white;
-text-decoration:none;
-margin-left:15px;
-font-weight:600;
-}
-
-.topbar a:hover{
-color:#25D366;
-}
-
-/* MAIN */
-.wrapper{
-padding:30px;
-}
-
-/* STATS */
-.stats{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:20px;
-margin-bottom:30px;
-}
-
-.stat-card{
-background:rgba(20,20,20,0.92);
-padding:25px;
-border-radius:15px;
-border:1px solid #333;
-box-shadow:0 0 20px rgba(0,0,0,0.4);
-}
-
-.stat-card h2{
-margin:0;
-font-size:34px;
-color:#25D366;
-}
-
-.stat-card p{
-margin-top:8px;
-opacity:0.7;
-}
-
-/* BOX */
-.box{
-background:rgba(18,18,18,0.95);
-padding:25px;
-border-radius:16px;
-border:1px solid #333;
-margin-bottom:25px;
-box-shadow:0 0 20px rgba(0,0,0,0.3);
-}
-
-.box h3{
-margin-top:0;
-color:#25D366;
-font-size:22px;
-}
-
-/* INPUTS */
-input,textarea,select{
-width:100%;
-padding:12px;
-margin-top:10px;
-margin-bottom:15px;
-background:#111;
-border:1px solid #333;
-border-radius:8px;
-color:white;
-box-sizing:border-box;
-}
-
-input:focus,textarea:focus,select:focus{
-outline:none;
-border-color:#25D366;
-}
-
-/* BUTTON */
-button{
-background:#25D366;
-color:black;
-border:none;
-padding:12px 20px;
-font-weight:bold;
-border-radius:8px;
-cursor:pointer;
-transition:0.3s;
-}
-
-button:hover{
-background:#1db954;
-transform:translateY(-2px);
-}
-
-/* TABLE */
-.table-wrap{
-overflow-x:auto;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:15px;
-}
-
-th{
-background:#25D366;
-color:black;
-padding:14px;
-font-size:14px;
-text-align:left;
-}
-
-td{
-padding:12px;
-border-bottom:1px solid #333;
-background:rgba(255,255,255,0.02);
-font-size:14px;
-}
-
-/* BADGES */
-.badge{
-padding:6px 10px;
-border-radius:30px;
-font-size:12px;
-font-weight:bold;
-display:inline-block;
-}
-
-.active{
-background:#25D366;
-color:black;
-}
-
-.pending{
-background:orange;
-color:black;
-}
-
-/* FILE BUTTON */
-.file-btn{
-background:#111;
-padding:8px 12px;
-border-radius:6px;
-text-decoration:none;
-color:#25D366;
-border:1px solid #25D366;
-font-size:13px;
-}
-
-/* DEPARTMENTS */
-.departments{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-gap:20px;
-}
-
-.dept{
-background:#151515;
-padding:18px;
-border-radius:12px;
-border-left:4px solid #25D366;
-}
-
-.dept h4{
-margin-top:0;
-color:#25D366;
-}
-
-/* FOOTER */
-.footer{
-text-align:center;
-opacity:0.5;
-margin-top:30px;
-font-size:13px;
-}
-
-</style>
-</head>
-
-<body>
-
-<!-- TOP -->
-<div class="topbar">
-    <h1>⚙ Automotive Professionals Admin</h1>
-
-    <div>
-        <a href="/">Home</a>
-        <a href="/settings">Settings</a>
-        <a href="/logout">Logout</a>
-    </div>
-</div>
-
-<div class="wrapper">
-
-<!-- STATS -->
-<div class="stats">
-
-    <div class="stat-card">
-        <h2>{{data|length}}</h2>
-        <p>Total Applications</p>
-    </div>
-
-    <div class="stat-card">
-        <h2>4</h2>
-        <p>Departments</p>
-    </div>
-
-    <div class="stat-card">
-        <h2>2026</h2>
-        <p>Current Intake</p>
-    </div>
-
-    <div class="stat-card">
-        <h2>ACTIVE</h2>
-        <p>Institution Status</p>
-    </div>
-
-</div>
-
-<!-- SETTINGS -->
-<div class="box">
-
-    <h3>🌍 Institution Settings</h3>
-
-    <form method="POST">
-
-        <label>Hero Text</label>
-        <input name="hero" value="{{s.hero}}">
-
-        <label>WhatsApp Number</label>
-        <input name="whatsapp" value="{{s.whatsapp}}">
-
-        <label>Courses</label>
-        <textarea name="courses" rows="5">{{s.courses}}</textarea>
-
-        <button type="submit">Save Live Changes</button>
-
-    </form>
-
-</div>
-
-<!-- LOGO -->
-<div class="box">
-
-    <h3>🖼 Upload Institution Logo</h3>
-
-    <form method="POST" action="/upload_logo" enctype="multipart/form-data">
-
-        <input type="file" name="logo">
-
-        <button type="submit">Upload Logo</button>
-
-    </form>
-
-</div>
-
-<!-- DEPARTMENTS -->
-<div class="box">
-
-<h3>🏭 Departments</h3>
-
-<div class="departments">
-
-<div class="dept">
-<h4>Heavy Plant Mechanics</h4>
-<p>18 Month Full Professional Course</p>
-</div>
-
-<div class="dept">
-<h4>Light Motor Mechanics</h4>
-<p>Engine Systems • Suspension • Diagnostics</p>
-</div>
-
-<div class="dept">
-<h4>Welding Department</h4>
-<p>6 Month Practical Industrial Training</p>
-</div>
-
-<div class="dept">
-<h4>Diagnostics & Maintenance</h4>
-<p>Short Skills Courses & Engine Management</p>
-</div>
-
-</div>
-
-</div>
-
-<!-- STUDENTS -->
-<div class="box">
-
-<h3>🧑‍🎓 Registered Students</h3>
-
-<div class="table-wrap">
-
-<table>
-
-<tr>
-<th>ID</th>
-<th>Student</th>
-<th>Phone</th>
-<th>Course</th>
-<th>Status</th>
-<th>Documents</th>
-<th>Date</th>
-</tr>
-
-{% for r in data %}
-
-<tr>
-
-<td>#{{r.id}}</td>
-
-<td>
-<b>{{r.name}}</b><br>
-<small>{{r.email}}</small>
-</td>
-
-<td>{{r.phone}}</td>
-
-<td>{{r.course}}</td>
-
-<td>
-<span class="badge active">
-Registered
-</span>
-</td>
-
-<td>
-{% if r.file %}
-<a class="file-btn" href="/uploads/{{r.file}}" target="_blank">
-View File
-</a>
-{% else %}
-No File
-{% endif %}
-</td>
-
-<td>{{r.date}}</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
-
-</div>
-
-</div>
-
-<div class="footer">
-© 2026 Automotive Professionals (Pty) Ltd — Institution Management System
-</div>
-
-</div>
-
-</body>
-</html>
-
-""", s=s, data=data)
 
 @app.route("/upload_logo", methods=["POST"])
 def upload_logo():
@@ -945,5 +579,11 @@ def files(file):
 def logout():
     session.clear()
     return redirect("/")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+    
+
+
+
