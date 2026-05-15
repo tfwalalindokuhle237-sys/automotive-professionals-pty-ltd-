@@ -89,9 +89,22 @@ def save(file):
     return ""
 
 
-def settings():
-    return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
+def get_settings():
+    conn = db()
+    data = conn.execute("SELECT * FROM settings WHERE id=1").fetchone()
+    conn.close()
+    return data
 
+
+def update_settings(hero, whatsapp, courses, logo):
+    conn = db()
+    conn.execute("""
+    UPDATE settings
+    SET hero=?, whatsapp=?, courses=?, logo=?
+    WHERE id=1
+    """, (hero, whatsapp, courses, logo))
+    conn.commit()
+    conn.close()
 
 def send_email(name, email, course):
     try:
@@ -295,6 +308,7 @@ def home():
         courses=courses,
         logo=s["logo"]
     )
+    
 def get_settings():
     return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
 
@@ -332,14 +346,13 @@ def apply():
     """
 
 
-@app.route("/admin", methods=["GET","POST"])
+@app.route("/admin", methods=["GET", "POST"])
 def admin():
     if not session.get("admin"):
         return redirect("/")
 
     s = get_settings()
 
-    # SAVE UPDATES
     if request.method == "POST":
         hero = request.form["hero"]
         whatsapp = request.form["whatsapp"]
@@ -363,36 +376,27 @@ def admin():
     <h1>ADMIN CONTROL PANEL</h1>
 
     <div class="box">
-        <h3>Edit Website</h3>
-
+        <h3>Edit Website Live</h3>
         <form method="POST">
-            <input name="hero" value="{{s.hero}}" placeholder="Hero Text">
-            <input name="whatsapp" value="{{s.whatsapp}}" placeholder="WhatsApp Number">
+            <input name="hero" value="{{s.hero}}">
+            <input name="whatsapp" value="{{s.whatsapp}}">
             <textarea name="courses">{{s.courses}}</textarea>
-            <button>Save Changes</button>
-        </form>
-    </div>
-
-    <div class="box">
-        <h3>Upload Logo</h3>
-        <form method="POST" action="/upload_logo" enctype="multipart/form-data">
-            <input type="file" name="logo">
-            <button>Upload</button>
+            <button>Save</button>
         </form>
     </div>
 
     <div class="box">
         <h3>Applications</h3>
         <table>
-        <tr><th>Name</th><th>Phone</th><th>Course</th><th>Date</th></tr>
-        {% for r in data %}
-        <tr>
-            <td>{{r.name}}</td>
-            <td>{{r.phone}}</td>
-            <td>{{r.course}}</td>
-            <td>{{r.date}}</td>
-        </tr>
-        {% endfor %}
+            <tr><th>Name</th><th>Phone</th><th>Course</th><th>Date</th></tr>
+            {% for r in data %}
+            <tr>
+                <td>{{r.name}}</td>
+                <td>{{r.phone}}</td>
+                <td>{{r.course}}</td>
+                <td>{{r.date}}</td>
+            </tr>
+            {% endfor %}
         </table>
     </div>
     """, s=s, data=data)
