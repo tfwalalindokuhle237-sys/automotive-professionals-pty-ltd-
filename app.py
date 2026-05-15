@@ -307,7 +307,7 @@ margin-top:20px;
         {% else %}
             <div class="logo"></div>
         {% endif %}
-        <b>Automotive Professionals</b>
+        <b>Automotive Professionals Pty Ltd</b>
     </div>
 
     <div>
@@ -327,7 +327,7 @@ margin-top:20px;
 <div class="hero">
     <div class="hero-box">
         <h1>{{h}}</h1>
-        <p>Excellence Through Practical Automotive Training</p>
+        <p>Excellence Through Practical Automotive Teaching</p>
     </div>
 </div>
 
