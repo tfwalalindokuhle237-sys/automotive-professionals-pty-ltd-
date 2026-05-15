@@ -1020,106 +1020,23 @@ def create_jobcard():
 
     """)
     
-    
-
-
 @app.route("/admin/invoice/<int:job_id>")
-def _invoice(job_id):
+def generate_invoice(job_id):
 
-    if not session.get("admin"):
-        return redirect("/login")
+    try:
+        if not session.get("admin"):
+            return redirect("/login")
 
-    conn = db()
+        conn = db()
 
-    job = conn.execute("""
-        SELECT * FROM workshop_jobs WHERE id=?
-    """, (job_id,)).fetchone()
+        job = conn.execute("SELECT * FROM workshop_jobs WHERE id=?", (job_id,)).fetchone()
 
-    if not job:
-        return "Job not found"
+        return str(dict(job))  # 🔥 DEBUG OUTPUT
 
-    invoice_number = f"INV-{job_id:05d}"
+    except Exception as e:
+        return str(e)
 
-    labor = job["labor_cost"] or 0
-    parts = job["parts_cost"] or 0
-    paid = job["amount_paid"] or 0
 
-    total = labor + parts
-    balance = total - paid
-
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS invoices(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_id INTEGER,
-            invoice_number TEXT,
-            customer_name TEXT,
-            plate TEXT,
-            labor REAL,
-            parts REAL,
-            total REAL,
-            paid REAL,
-            balance REAL,
-            date TEXT
-        )
-    """)
-
-    conn.execute("""
-        INSERT INTO invoices(
-            job_id, invoice_number, customer_name,
-            plate, labor, parts, total,
-            paid, balance, date
-        )
-        VALUES(?,?,?,?,?,?,?,?,?,?)
-    """, (
-        job_id,
-        invoice_number,
-        job["customer_name"],
-        job["registration"],
-        labor,
-        parts,
-        total,
-        paid,
-        balance,
-        datetime.now().strftime("%Y-%m-%d")
-    ))
-
-    conn.commit()
-    conn.close()
-
-    filename = f"{invoice_number}.pdf"
-    filepath = os.path.join("uploads", filename)
-
-    doc = SimpleDocTemplate(filepath, pagesize=A4)
-    styles = getSampleStyleSheet()
-    content = []
-
-    content.append(Paragraph("AUTOMOTIVE WORKSHOP INVOICE", styles["Title"]))
-    content.append(Spacer(1, 12))
-
-    content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
-    content.append(Paragraph(f"Customer: {job['customer_name']}", styles["Normal"]))
-    content.append(Paragraph(f"Phone: {job['phone']}", styles["Normal"]))
-    content.append(Paragraph(
-        f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}",
-        styles["Normal"]
-    ))
-    content.append(Paragraph(f"Plate: {job['registration']}", styles["Normal"]))
-
-    content.append(Spacer(1, 12))
-
-    content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
-    content.append(Paragraph(f"Parts Cost: R {parts}", styles["Normal"]))
-    content.append(Paragraph(f"TOTAL: R {total}", styles["Normal"]))
-    content.append(Paragraph(f"Paid: R {paid}", styles["Normal"]))
-    content.append(Paragraph(f"Balance: R {balance}", styles["Normal"]))
-
-    content.append(Spacer(1, 12))
-    content.append(Paragraph("Thank you for choosing our workshop!", styles["Normal"]))
-
-    doc.build(content)
-
-    return send_from_directory("uploads", filename, as_attachment=True)
-    
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
