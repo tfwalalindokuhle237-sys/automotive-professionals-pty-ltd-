@@ -5,6 +5,8 @@ from datetime import datetime
 from threading import Thread
 import smtplib
 from werkzeug.utils import secure_filename
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
 app.secret_key = "CHANGE_THIS_TO_RANDOM_SECURE_KEY"
@@ -993,6 +995,88 @@ def admin():
         content=content
     )
 
+@app.route("/admin/student_statement/<int:student_id>")
+def student_statement(student_id):
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    student = conn.execute("""
+        SELECT * FROM students WHERE id=?
+    """, (student_id,)).fetchone()
+
+    payments = conn.execute("""
+        SELECT * FROM payments WHERE student_id=?
+    """, (student_id,)).fetchall()
+
+    conn.close()
+
+    filename = f"statement_{student_id}.pdf"
+
+    doc = SimpleDocTemplate(filename)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph(
+            f"<b>Automotive Professionals Pty Ltd</b>",
+            styles["Title"]
+        )
+    )
+
+    elements.append(Spacer(1, 12))
+
+    elements.append(
+        Paragraph(f"Student: {student['name']}", styles["BodyText"])
+    )
+
+    elements.append(
+        Paragraph(f"Course: {student['course']}", styles["BodyText"])
+    )
+
+    elements.append(
+        Paragraph(f"Date Registered: {student['date']}", styles["BodyText"])
+    )
+
+    elements.append(Spacer(1, 12))
+
+    total_paid = 0
+
+    for p in payments:
+        total_paid += p["amount"]
+
+        elements.append(
+            Paragraph(
+                f"Payment: {p['amount']} | Date: {p['date']}",
+                styles["BodyText"]
+            )
+        )
+
+    try:
+        tuition = float(student["status"])
+    except:
+        tuition = 0
+
+    balance = tuition - total_paid
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(f"<b>Total Paid:</b> {total_paid}", styles["BodyText"])
+    )
+
+    elements.append(
+        Paragraph(f"<b>Balance:</b> {balance}", styles["BodyText"])
+    )
+
+    doc.build(elements)
+
+    return send_from_directory(".", filename, as_attachment=True)
+    
 @app.route("/admin/students", methods=["GET", "POST"])
 def admin_students():
 
@@ -1011,7 +1095,7 @@ def admin_students():
             request.form["phone"],
             request.form["email"],
             request.form["course"],
-            request.form["tuition"],  # store tuition here temporarily
+            request.form["tuition"],  # storing tuition temporarily
             datetime.now().strftime("%Y-%m-%d")
         ))
         conn.commit()
@@ -1027,17 +1111,25 @@ def admin_students():
     student_data = []
 
     for s in students:
+
         conn = db()
 
         paid = conn.execute("""
-            SELECT SUM(amount) as total FROM payments WHERE student_id=?
+            SELECT SUM(amount) as total
+            FROM payments
+            WHERE student_id=?
         """, (s["id"],)).fetchone()["total"]
+
+        payments = conn.execute("""
+            SELECT * FROM payments
+            WHERE student_id=?
+            ORDER BY id DESC
+        """, (s["id"],)).fetchall()
 
         conn.close()
 
         paid = paid if paid else 0
 
-        # we store tuition inside status temporarily (simple fix for now)
         try:
             tuition = float(s["status"])
         except:
@@ -1054,28 +1146,110 @@ def admin_students():
             "tuition": tuition,
             "paid": paid,
             "balance": balance,
+            "payments": payments,
             "date": s["date"]
         })
 
     return render_template_string("""
-    <h2>Student Finance System</h2>
+
+    <style>
+    body{
+        font-family:Arial;
+        color:white;
+    }
+
+    .card{
+        background:rgba(20,20,20,0.9);
+        padding:20px;
+        border-radius:10px;
+        margin-bottom:20px;
+        border:1px solid #333;
+    }
+
+    input{
+        width:100%;
+        padding:10px;
+        margin:6px 0;
+        background:#111;
+        color:white;
+        border:1px solid #333;
+    }
+
+    button{
+        padding:10px;
+        background:#25D366;
+        border:none;
+        font-weight:bold;
+        cursor:pointer;
+    }
+
+    table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:15px;
+    }
+
+    th,td{
+        border:1px solid #333;
+        padding:8px;
+        font-size:13px;
+    }
+
+    th{
+        background:#111;
+        color:#25D366;
+    }
+
+    .paid{
+        color:lime;
+        font-weight:bold;
+    }
+
+    .overdue{
+        color:red;
+        font-weight:bold;
+    }
+
+    .pdf-btn{
+        display:inline-block;
+        margin-top:8px;
+        padding:6px 10px;
+        background:#25D366;
+        color:black;
+        text-decoration:none;
+        font-size:12px;
+        border-radius:5px;
+    }
+    </style>
+
+    <div class="card">
+
+    <h2>🎓 Student Finance System</h2>
 
     <form method="POST">
-        <input name="name" placeholder="Student Name" required>
-        <input name="phone" placeholder="Phone" required>
-        <input name="email" placeholder="Email" required>
 
-        <input name="course" placeholder="Course" required>
-        <input name="tuition" placeholder="Total Tuition" required>
+        <input name="name" placeholder="Student Name" required>
+
+        <input name="phone" placeholder="Phone Number" required>
+
+        <input name="email" placeholder="Email Address" required>
+
+        <input name="course" placeholder="Course / Department" required>
+
+        <input name="tuition" placeholder="Total Tuition Amount" required>
 
         <button>Add Student</button>
+
     </form>
 
-    <hr>
+    </div>
 
-    <h3>Students Finance Overview</h3>
+    <div class="card">
 
-    <table border="1" cellpadding="6">
+    <h3>📊 Students Finance Overview</h3>
+
+    <table>
+
         <tr>
             <th>Name</th>
             <th>Course</th>
@@ -1083,36 +1257,93 @@ def admin_students():
             <th>Paid</th>
             <th>Balance</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Actions</th>
         </tr>
 
         {% for s in students %}
+
         <tr>
+
             <td>{{s.name}}</td>
+
             <td>{{s.course}}</td>
+
             <td>{{s.tuition}}</td>
+
             <td>{{s.paid}}</td>
+
             <td>{{s.balance}}</td>
 
             <td>
+
                 {% if s.balance > 0 %}
-                    <span style="color:red;">OVERDUE</span>
+                    <span class="overdue">OVERDUE</span>
                 {% else %}
-                    <span style="color:lime;">PAID</span>
+                    <span class="paid">PAID</span>
                 {% endif %}
+
             </td>
 
             <td>
+
+                <!-- ADD PAYMENT -->
+
                 <form method="POST" action="/admin/pay/{{s.id}}">
-                    <input name="amount" placeholder="Pay amount" style="width:100px;">
+
+                    <input
+                    name="amount"
+                    placeholder="Payment Amount"
+                    style="width:120px;">
+
                     <button>Add</button>
+
                 </form>
+
+                <br>
+
+                <!-- PDF -->
+
+                <a
+                class="pdf-btn"
+                href="/admin/student_statement/{{s.id}}">
+                📄 Download Statement
+                </a>
+
+            </td>
+
+        </tr>
+
+        <!-- PAYMENT HISTORY -->
+
+        <tr>
+            <td colspan="7">
+
+                <b>Payment History:</b>
+
+                <ul>
+
+                {% for p in s.payments %}
+
+                    <li>
+                        {{p.amount}} paid on {{p.date}}
+                    </li>
+
+                {% endfor %}
+
+                </ul>
+
             </td>
         </tr>
+
         {% endfor %}
+
     </table>
+
+    </div>
+
     """, students=student_data)
-@app.route("/upload_logo", methods=["POST"])
+
+app.route("/upload_logo", methods=["POST"])
 def upload_logo():
     if not session.get("admin"):
         return redirect("/login")
