@@ -62,7 +62,7 @@ def init():
         1,
         'Automotive Training Centre',
         '26876783891',
-        '12 Months - Heavy Plant Mechanics,Light Motor Mechanics | 6 Months - Welding | Short Courses- Engine Management And Diagnosis,General Maintenance',
+        '12 Months - Heavy Plant Mechanics, 12 Months - Light Motor Mechanics | 6 Months - Welding | Short Courses- Engine Management And Diagnosis,General Maintenance',
         ''
     )
     """)
@@ -376,7 +376,30 @@ margin-top:20px;
 </div>
 
 <footer>
-© 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
+    © 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
+
+    <br><br>
+
+    <div style="display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:wrap;">
+
+        <!-- FACEBOOK -->
+        <a href="https://facebook.com" target="_blank"
+        style="color:white;text-decoration:none;font-size:15px;">
+            📘 Automotive Professionals Pty Ltd
+        </a>
+
+        <!-- WHATSAPP -->
+        <a href="https://wa.me/26876783891" target="_blank"
+        style="color:#25D366;text-decoration:none;font-size:15px;">
+            💬 WhatsApp
+        </a>
+
+        <!-- PHONE -->
+        <span style="font-size:15px;">
+            📞 +268 7678 3891
+        </span>
+
+    </div>
 </footer>
 
 </div>
