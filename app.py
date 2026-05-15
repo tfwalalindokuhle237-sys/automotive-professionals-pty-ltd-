@@ -1,5 +1,6 @@
-from flask import Flask, render_template_string, request, redirect, session, send_from_directory, url_for
-import sqlite3, os
+from flask import Flask, render_template_string, request, redirect, session, send_from_directory
+import sqlite3
+import os
 from datetime import datetime
 from threading import Thread
 import smtplib
@@ -11,8 +12,8 @@ app.secret_key = "CHANGE_THIS_TO_RANDOM_SECURE_KEY"
 # ---------------- CONFIG ----------------
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
 ADMIN_PASSWORD = "1234"
@@ -32,6 +33,7 @@ def init():
     conn = db()
     c = conn.cursor()
 
+    # applications
     c.execute("""
     CREATE TABLE IF NOT EXISTS applications(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,11 +41,12 @@ def init():
         phone TEXT,
         email TEXT,
         course TEXT,
-        id_file TEXT,
+        file TEXT,
         date TEXT
     )
     """)
 
+    # settings (LIVE editable later in admin)
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings(
         id INTEGER PRIMARY KEY,
@@ -53,16 +56,26 @@ def init():
     )
     """)
 
-    c.execute("INSERT OR IGNORE INTO settings VALUES (1,'Automotive Training Centre','26876783891','Mechanics,Welding,Diagnostics')")
+    # DEFAULT DATA (YOUR COURSES)
+    c.execute("""
+    INSERT OR IGNORE INTO settings VALUES (
+        1,
+        'Automotive Training Centre',
+        '26876783891',
+        'Level 3 - Full Course (18 Months): Heavy Plant Mechanics, Light Motor Mechanics | 6 Month Course: Welding | Short Courses: Engine Management & Diagnosis, General Maintenance'
+    )
+    """)
+
     conn.commit()
     conn.close()
+
 
 init()
 
 
 # ---------------- HELPERS ----------------
-def allowed(f):
-    return "." in f and f.rsplit(".",1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def save(file):
@@ -82,7 +95,7 @@ def settings():
 def send_email(name, email, course):
     try:
         msg = f"Subject: New Application\n\n{name} applied for {course}"
-        server = smtplib.SMTP("smtp.gmail.com",587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(MAIL_SENDER, MAIL_PASSWORD)
         server.sendmail(MAIL_SENDER, email, msg)
@@ -91,7 +104,7 @@ def send_email(name, email, course):
         print("Email failed")
 
 
-# ---------------- UI ----------------
+# ---------------- UI (UPGRADED PROFESSIONAL) ----------------
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -101,14 +114,13 @@ HTML = """
 <style>
 body{
 margin:0;
-font-family:Segoe UI, Arial;
+font-family:Segoe UI;
 color:white;
 background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
 }
 
-/* DARK OVERLAY */
 .overlay{
-background:rgba(0,0,0,0.78);
+background:rgba(0,0,0,0.8);
 min-height:100vh;
 }
 
@@ -119,147 +131,88 @@ justify-content:space-between;
 align-items:center;
 padding:15px 25px;
 background:rgba(0,0,0,0.85);
-backdrop-filter:blur(10px);
-border-bottom:1px solid #222;
-}
-
-.logo-area{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.logo{
-width:40px;
-height:40px;
-border-radius:50%;
-background:#222;
-object-fit:cover;
-border:2px solid #25D366;
+border-bottom:1px solid #333;
 }
 
 .nav a{
 color:white;
 margin:0 10px;
 text-decoration:none;
-font-weight:500;
 }
 
-.nav a:hover{
-color:#25D366;
+.logo{
+width:45px;
+height:45px;
+border-radius:50%;
+background:#222;
+border:2px solid #25D366;
 }
 
 /* HERO */
 .hero{
 text-align:center;
-padding:80px 20px;
-}
-
-.hero-box{
-display:inline-block;
-padding:20px 30px;
-border-radius:15px;
-background:rgba(0,0,0,0.6);
-backdrop-filter:blur(8px);
-border:1px solid #333;
+padding:70px 20px;
 }
 
 .hero h1{
-margin:0;
 color:#25D366;
 font-size:42px;
+margin:0;
 }
 
-.hero p{
-opacity:0.8;
-margin-top:10px;
-}
-
-/* MAIN LAYOUT */
+/* LAYOUT */
 .container{
 display:flex;
 justify-content:center;
 flex-wrap:wrap;
 gap:20px;
-padding:40px;
+padding:30px;
 }
 
-/* GLASS CARD */
+/* CARD */
 .card{
 background:rgba(20,20,20,0.85);
-backdrop-filter:blur(10px);
-padding:22px;
-width:300px;
-border-radius:15px;
+padding:20px;
+width:320px;
+border-radius:12px;
 border:1px solid #333;
-transition:0.3s;
 }
 
-.card:hover{
-transform:translateY(-8px);
-border-color:#25D366;
-}
-
-/* INPUTS */
+/* INPUT */
 input,select{
 width:100%;
 padding:10px;
-margin:8px 0;
-border-radius:8px;
-border:1px solid #333;
+margin:6px 0;
 background:#111;
 color:white;
-outline:none;
-}
-
-input:focus,select:focus{
-border-color:#25D366;
+border:1px solid #333;
 }
 
 /* BUTTON */
 .btn{
-display:inline-block;
-width:100%;
-padding:12px;
 background:#25D366;
-color:black;
-border:none;
-border-radius:8px;
-font-weight:bold;
-cursor:pointer;
-transition:0.3s;
-}
-
-.btn:hover{
-background:#1fae55;
-transform:scale(1.03);
-}
-
-/* PROFILE SLOT */
-.profile-upload{
-text-align:center;
 padding:10px;
-border:1px dashed #444;
-border-radius:10px;
-margin-bottom:15px;
-color:#aaa;
+width:100%;
+border:none;
+cursor:pointer;
+font-weight:bold;
 }
 
 /* COURSES */
-.course-list p{
-margin:8px 0;
-padding:8px;
+.course{
 background:#111;
-border-radius:6px;
+padding:8px;
+margin:5px 0;
 border-left:3px solid #25D366;
 }
 
-/* FOOTER */
-footer{
+/* PROFILE SLOT */
+.slot{
 text-align:center;
-padding:20px;
-opacity:0.6;
-font-size:13px;
+padding:15px;
+border:1px dashed #444;
+margin-bottom:10px;
+color:#aaa;
 }
 </style>
 </head>
@@ -268,83 +221,66 @@ font-size:13px;
 
 <div class="overlay">
 
-<!-- NAV -->
 <div class="nav">
-
-    <div class="logo-area">
+    <div style="display:flex;align-items:center;gap:10px;">
         <div class="logo"></div>
-        <div><b>Automotive Professionals</b></div>
+        <b>Automotive Professionals</b>
     </div>
-
     <div>
         <a href="/">Home</a>
         <a href="/admin">Admin</a>
-        <a href="/login">Login</a>
     </div>
-
 </div>
 
-<!-- HERO -->
 <div class="hero">
-    <div class="hero-box">
-        <h1>{{h}}</h1>
-        <p>Excellence Through Practical Automotive Training</p>
-    </div>
+    <h1>{{h}}</h1>
 </div>
 
-<!-- CONTENT -->
 <div class="container">
 
-    <!-- APPLY -->
-    <div class="card">
+<!-- APPLY -->
+<div class="card">
 
-        <h3>Student Application</h3>
+<h3>Student Application</h3>
 
-        <!-- PROFILE SLOT (future admin upload) -->
-        <div class="profile-upload">
-            Institution Logo Slot (Admin Upload)
-        </div>
+<div class="slot">Institution Logo (Admin Upload Later)</div>
 
-        <form method="POST" action="/apply" enctype="multipart/form-data">
+<form method="POST" action="/apply" enctype="multipart/form-data">
 
-            <input name="name" placeholder="Full Name" required>
-            <input name="phone" placeholder="Phone Number" required>
-            <input name="email" placeholder="Email Address" required>
+<input name="name" placeholder="Full Name" required>
+<input name="phone" placeholder="Phone Number" required>
+<input name="email" placeholder="Email" required>
 
-            <select name="course">
-                {% for c in courses %}
-                <option>{{c}}</option>
-                {% endfor %}
-            </select>
+<select name="course">
+{% for c in courses %}
+<option>{{c}}</option>
+{% endfor %}
+</select>
 
-            <input type="file" name="file" required>
+<input type="file" name="file">
 
-            <button class="btn">Submit Application</button>
+<button class="btn">Submit Application</button>
 
-        </form>
-    </div>
+</form>
+</div>
 
-    <!-- COURSES -->
-    <div class="card">
-        <h3>Available Courses</h3>
-        <div class="course-list">
-            {% for c in courses %}
-            <p>{{c}}</p>
-            {% endfor %}
-        </div>
-    </div>
+<!-- COURSES -->
+<div class="card">
+<h3>Courses</h3>
+
+{% for c in courses %}
+<div class="course">{{c}}</div>
+{% endfor %}
 
 </div>
 
-<footer>
-© 2026 Automotive Professionals (Pty) Ltd | Built for real training systems
-</footer>
-
+</div>
 </div>
 
 </body>
 </html>
 """
+
 
 # ---------------- ROUTES ----------------
 @app.route("/")
@@ -358,42 +294,62 @@ def apply():
     f = save(request.files.get("file"))
 
     conn = db()
-    conn.execute("INSERT INTO applications VALUES(NULL,?,?,?,?,?,?)",
-        (request.form["name"], request.form["phone"], request.form["email"],
-         request.form["course"], f, datetime.now().strftime("%Y-%m-%d %H:%M")))
+    conn.execute("""
+        INSERT INTO applications VALUES(NULL,?,?,?,?,?,?)
+    """, (
+        request.form["name"],
+        request.form["phone"],
+        request.form["email"],
+        request.form["course"],
+        f,
+        datetime.now().strftime("%Y-%m-%d %H:%M")
+    ))
     conn.commit()
 
-    Thread(target=send_email, args=(request.form["name"],request.form["email"],request.form["course"])).start()
+    Thread(target=send_email,
+           args=(request.form["name"], request.form["email"], request.form["course"])).start()
 
-    return "<h2>Submitted ✅</h2><a href='/'>Back</a>"
+    return """
+    <h2 style='font-family:Arial'>Application Submitted ✅</h2>
+    <a href='/'>Back Home</a>
+    """
 
 
 @app.route("/admin")
 def admin():
     if not session.get("admin"):
-        return redirect("/login")
+        return redirect("/")
 
     data = db().execute("SELECT * FROM applications ORDER BY id DESC").fetchall()
 
-    html = "<h1>ADMIN</h1><table border='1' style='width:100%'>"
+    html = "<h1>ADMIN DASHBOARD</h1><table border='1' style='width:100%;font-family:Arial'>"
+    html += "<tr><th>Name</th><th>Phone</th><th>Course</th><th>Date</th></tr>"
+
     for r in data:
-        html += f"<tr><td>{r['name']}</td><td>{r['phone']}</td><td>{r['course']}</td></tr>"
+        html += f"<tr><td>{r['name']}</td><td>{r['phone']}</td><td>{r['course']}</td><td>{r['date']}</td></tr>"
+
     html += "</table>"
     return html
 
 
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         if request.form["password"] == ADMIN_PASSWORD:
             session["admin"] = True
             return redirect("/admin")
-    return "<form method='POST'><input name='password'><button>Login</button></form>"
+
+    return """
+    <form method='POST'>
+        <input name='password' placeholder='Admin Password'>
+        <button>Login</button>
+    </form>
+    """
 
 
 @app.route("/uploads/<file>")
 def files(file):
-    return send_from_directory(UPLOAD_FOLDER,file)
+    return send_from_directory(UPLOAD_FOLDER, file)
 
 
 @app.route("/logout")
