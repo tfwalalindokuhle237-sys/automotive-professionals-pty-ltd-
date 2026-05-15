@@ -384,7 +384,24 @@ margin-top:20px;
 </body>
 </html>
 """
+
 # ---------------- ROUTES ----------------
+
+def get_settings():
+    return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
+
+
+def update_settings(hero, whatsapp, courses, logo):
+    conn = db()
+    conn.execute("""
+        UPDATE settings
+        SET hero=?, whatsapp=?, courses=?, logo=?
+        WHERE id=1
+    """, (hero, whatsapp, courses, logo))
+    conn.commit()
+    conn.close()
+
+
 @app.route("/")
 def home():
     s = get_settings()
@@ -393,30 +410,22 @@ def home():
     for block in s["courses"].split("|"):
         courses += block.split(",")
 
-    return render_template_string(HTML,
+    return render_template_string(
+        HTML,
         h=s["hero"],
         courses=courses,
         logo=s["logo"]
     )
-    
-def get_settings():
-    return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
 
 
-def update_settings(hero, whatsapp, courses, logo):
-    db().execute("""
-    UPDATE settings
-    SET hero=?, whatsapp=?, courses=?, logo=?
-    WHERE id=1
-    """, (hero, whatsapp, courses, logo))
-    db().commit()
 @app.route("/apply", methods=["POST"])
 def apply():
     f = save(request.files.get("file"))
 
     conn = db()
     conn.execute("""
-        INSERT INTO applications VALUES(NULL,?,?,?,?,?,?)
+        INSERT INTO applications(name,phone,email,course,file,date)
+        VALUES(?,?,?,?,?,?)
     """, (
         request.form["name"],
         request.form["phone"],
@@ -426,32 +435,39 @@ def apply():
         datetime.now().strftime("%Y-%m-%d %H:%M")
     ))
     conn.commit()
+    conn.close()
 
-    Thread(target=send_email,
-           args=(request.form["name"], request.form["email"], request.form["course"])).start()
+    Thread(
+        target=send_email,
+        args=(request.form["name"], request.form["email"], request.form["course"])
+    ).start()
 
     return """
     <h2 style='font-family:Arial'>Application Submitted ✅</h2>
     <a href='/'>Back Home</a>
     """
+
+
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
         return redirect("/login")
 
-    s = safe_settings()
+    s = get_settings()
 
     if request.method == "POST":
         hero = request.form["hero"]
         whatsapp = request.form["whatsapp"]
         courses = request.form["courses"]
 
-        db().execute("""
+        conn = db()
+        conn.execute("""
             UPDATE settings
             SET hero=?, whatsapp=?, courses=?
             WHERE id=1
         """, (hero, whatsapp, courses))
-        db().commit()
+        conn.commit()
+        conn.close()
 
         return redirect("/settings")
 
@@ -466,6 +482,7 @@ def settings_page():
         <button>Save</button>
     </form>
     """, s=s)
+
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
@@ -522,6 +539,7 @@ def admin():
     </div>
     """, s=s, data=data)
 
+
 @app.route("/upload_logo", methods=["POST"])
 def upload_logo():
     if not session.get("admin"):
@@ -530,10 +548,13 @@ def upload_logo():
     file = request.files.get("logo")
     if file:
         filename = save(file)
-        db().execute("UPDATE settings SET logo=? WHERE id=1", (filename,))
-        db().commit()
+        conn = db()
+        conn.execute("UPDATE settings SET logo=? WHERE id=1", (filename,))
+        conn.commit()
+        conn.close()
 
     return redirect("/admin")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -559,7 +580,5 @@ def files(file):
 def logout():
     session.clear()
     return redirect("/")
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
