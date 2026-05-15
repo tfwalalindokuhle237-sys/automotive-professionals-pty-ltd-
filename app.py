@@ -45,6 +45,29 @@ def init():
     )
     """)
 
+    # REGISTERED STUDENTS
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS students(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        phone TEXT,
+        email TEXT,
+        course TEXT,
+        status TEXT,
+        date TEXT
+    )
+    """)
+
+    # INSTITUTION FILES
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS files(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT,
+        description TEXT,
+        date TEXT
+    )
+    """)
+
     # settings (LIVE editable later in admin)
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings(
@@ -72,8 +95,6 @@ def init():
 
 
 init()
-
-
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -423,6 +444,30 @@ def update_settings(hero, whatsapp, courses, logo):
     conn.commit()
     conn.close()
 
+@app.route("/upload_file", methods=["POST"])
+def upload_file():
+    if not session.get("admin"):
+        return redirect("/login")
+
+    file = request.files.get("file")
+    desc = request.form.get("desc")
+
+    if file:
+        filename = save(file)
+
+        conn = db()
+        conn.execute("""
+            INSERT INTO files(filename, description, date)
+            VALUES(?,?,?)
+        """, (
+            filename,
+            desc,
+            datetime.now().strftime("%Y-%m-%d %H:%M")
+        ))
+        conn.commit()
+        conn.close()
+
+    return redirect("/admin")
 
 @app.route("/")
 def home():
@@ -507,59 +552,168 @@ def settings_page():
 
 
 # ---------------- FIXED ADMIN HTML (ADDED) ----------------
+
 ADMIN_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>Admin Dashboard</title>
+<title>Workshop Admin Panel</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-body{font-family:Arial;background:#111;color:white;margin:0;padding:20px;}
-input,textarea{width:100%;padding:10px;margin:6px 0;}
-button{padding:10px;background:#25D366;border:0;color:black;font-weight:bold;cursor:pointer;}
-table{width:100%;margin-top:20px;border-collapse:collapse;}
-td,th{border:1px solid #333;padding:8px;}
+body{
+margin:0;
+font-family:Arial;
+color:white;
+background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
+}
+
+.overlay{
+background:rgba(0,0,0,0.85);
+min-height:100vh;
+padding:20px;
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:rgba(0,0,0,0.7);
+border:1px solid #333;
+border-radius:10px;
+}
+
+.title{
+font-size:22px;
+color:#25D366;
+font-weight:bold;
+}
+
+/* GRID */
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+gap:20px;
+margin-top:20px;
+}
+
+/* CARD */
+.card{
+background:rgba(20,20,20,0.9);
+padding:15px;
+border-radius:10px;
+border:1px solid #333;
+}
+
+.card h3{
+color:#25D366;
+}
+
+/* TABLE */
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #333;
+padding:8px;
+font-size:13px;
+}
+
+th{
+background:#111;
+color:#25D366;
+}
+
+/* BUTTON */
+.btn{
+background:#25D366;
+border:none;
+padding:10px;
+width:100%;
+font-weight:bold;
+cursor:pointer;
+}
+
+input,textarea{
+width:100%;
+padding:8px;
+margin:5px 0;
+background:#111;
+color:white;
+border:1px solid #333;
+}
+
 </style>
 </head>
+
 <body>
 
-<h2>Admin Dashboard</h2>
+<div class="overlay">
 
-<h3>Update Settings</h3>
-<form method="POST">
-    <input name="hero" value="{{s['hero']}}">
-    <input name="whatsapp" value="{{s['whatsapp']}}">
-    <textarea name="courses">{{s['courses']}}</textarea>
-    <button>Save</button>
-</form>
+<div class="header">
+    <div class="title">🔧 Automotive Workshop Admin</div>
+    <a href="/logout" style="color:white;">Logout</a>
+</div>
 
-<h3>Applications</h3>
-<table>
-<tr>
-<th>Name</th>
-<th>Phone</th>
-<th>Email</th>
-<th>Course</th>
-<th>Date</th>
-</tr>
+<div class="grid">
 
-{% for row in data %}
-<tr>
-<td>{{row['name']}}</td>
-<td>{{row['phone']}}</td>
-<td>{{row['email']}}</td>
-<td>{{row['course']}}</td>
-<td>{{row['date']}}</td>
-</tr>
-{% endfor %}
+    <!-- SETTINGS -->
+    <div class="card">
+        <h3>Institution Settings</h3>
+        <form method="POST" action="/admin">
+            <input name="hero" value="{{s['hero']}}">
+            <input name="whatsapp" value="{{s['whatsapp']}}">
+            <textarea name="courses">{{s['courses']}}</textarea>
+            <button class="btn">Save Settings</button>
+        </form>
+    </div>
 
-</table>
+    <!-- APPLICATIONS -->
+    <div class="card">
+        <h3>New Applications</h3>
+        <table>
+        <tr><th>Name</th><th>Course</th><th>Date</th></tr>
+        {% for row in data %}
+        <tr>
+            <td>{{row['name']}}</td>
+            <td>{{row['course']}}</td>
+            <td>{{row['date']}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="card">
+        <h3>Registered Students</h3>
+        <p style="opacity:0.7">(Feature ready for expansion)</p>
+    </div>
+
+    <!-- FILES -->
+    <div class="card">
+        <h3>Institution Files</h3>
+
+        <form method="POST" action="/upload_file" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <input name="desc" placeholder="File description">
+            <button class="btn">Upload File</button>
+        </form>
+
+    </div>
+
+</div>
+
+</div>
 
 </body>
 </html>
 """
-
-
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
 
