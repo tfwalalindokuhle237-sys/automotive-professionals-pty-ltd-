@@ -470,7 +470,7 @@ def apply():
     <a href='/'>Back Home</a>
     """
     
-    @app.route("/settings", methods=["GET", "POST"])
+@app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
         return redirect("/login")
