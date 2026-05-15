@@ -298,9 +298,10 @@ margin-top:20px;
 <div class="overlay">
 
 <!-- NAV -->
+
 <div class="nav">
 
-    <div class="nav-left">
+    <div style="display:flex;align-items:center;gap:10px;">
         {% if logo %}
             <img src="/uploads/{{logo}}" class="logo">
         {% else %}
@@ -311,12 +312,17 @@ margin-top:20px;
 
     <div>
         <a href="/">Home</a>
-        <a href="/admin">Admin</a>
-        <a href="/login">Login</a>
+
+        {% if session.admin %}
+            <a href="/admin">Dashboard</a>
+            <a href="/settings">Settings</a>
+            <a href="/logout">Logout</a>
+        {% else %}
+            <a href="/login">Staff Login</a>
+        {% endif %}
     </div>
 
 </div>
-
 <!-- HERO -->
 <div class="hero">
     <div class="hero-box">
@@ -428,7 +434,38 @@ def apply():
     <h2 style='font-family:Arial'>Application Submitted ✅</h2>
     <a href='/'>Back Home</a>
     """
+@app.route("/settings", methods=["GET", "POST"])
+def settings_page():
+    if not session.get("admin"):
+        return redirect("/login")
 
+    s = safe_settings()
+
+    if request.method == "POST":
+        hero = request.form["hero"]
+        whatsapp = request.form["whatsapp"]
+        courses = request.form["courses"]
+
+        db().execute("""
+            UPDATE settings
+            SET hero=?, whatsapp=?, courses=?
+            WHERE id=1
+        """, (hero, whatsapp, courses))
+        db().commit()
+
+        return redirect("/settings")
+
+    return render_template_string("""
+    <h2>Settings Panel</h2>
+
+    <form method="POST">
+        <input name="hero" value="{{s.hero}}" placeholder="Hero Text">
+        <input name="whatsapp" value="{{s.whatsapp}}" placeholder="WhatsApp">
+        <textarea name="courses">{{s.courses}}</textarea>
+
+        <button>Save</button>
+    </form>
+    """, s=s)
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
