@@ -18,7 +18,7 @@ ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
 ADMIN_PASSWORD = "1234"
 
-MAIL_SENDER = "your_email@gmail.com"
+MAIL_SENDER = "takernkambule@gmail.com"
 MAIL_PASSWORD = "your_app_password"
 
 # ---------------- DATABASE ----------------
@@ -340,7 +340,7 @@ margin-top:20px;
         <h3>Student Application</h3>
 
         <div class="slot">
-            Welcome To Automotive Professionals,continue below to proceed  with your registrations, all the best.)
+            Welcome To Automotive Professionals,continue below to proceed  with your registrations, all the best :)
         </div>
 
         <form method="POST" action="/apply" enctype="multipart/form-data">
