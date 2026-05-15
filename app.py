@@ -116,7 +116,20 @@ def get_settings():
     conn.close()
     return data
 
+def get_stats():
+    conn = db()
 
+    students = conn.execute("SELECT COUNT(*) FROM students").fetchone()[0]
+    apps = conn.execute("SELECT COUNT(*) FROM applications").fetchone()[0]
+    files = conn.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+
+    conn.close()
+
+    return {
+        "students": students,
+        "apps": apps,
+        "files": files
+    }
 def update_settings(hero, whatsapp, courses, logo):
     conn = db()
     conn.execute("""
@@ -219,6 +232,29 @@ font-size:42px;
 .hero p{
 margin-top:10px;
 opacity:0.8;
+}
+
+/* DASHBOARD STATS (NEW - ADDED ONLY) */
+.dashboard{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:20px;
+padding:20px 0;
+}
+
+.stat-box{
+background:rgba(20,20,20,0.88);
+padding:18px;
+width:200px;
+border-radius:12px;
+border:1px solid #333;
+text-align:center;
+}
+
+.stat-box h2{
+margin:5px 0;
+color:#25D366;
 }
 
 /* DASHBOARD MINI BADGE */
@@ -352,6 +388,26 @@ border-top:1px solid #222;
         <div class="badge">ADMIN MODE ACTIVE</div>
         {% endif %}
     </div>
+</div>
+
+<!-- ✅ DASHBOARD STATS (ADDED ONLY HERE) -->
+<div class="dashboard">
+
+    <div class="stat-box">
+        <h3>Students</h3>
+        <h2>{{stats.students}}</h2>
+    </div>
+
+    <div class="stat-box">
+        <h3>Applications</h3>
+        <h2>{{stats.apps}}</h2>
+    </div>
+
+    <div class="stat-box">
+        <h3>Files</h3>
+        <h2>{{stats.files}}</h2>
+    </div>
+
 </div>
 
 <!-- CONTENT -->
@@ -507,9 +563,9 @@ def home():
         HTML,
         h=s["hero"],
         courses=courses,
-        logo=s["logo"]
+        logo=s["logo"],
+        stats=get_stats()   # ✅ ADDED THIS
     )
-
 
 @app.route("/apply", methods=["POST"])
 def apply():
