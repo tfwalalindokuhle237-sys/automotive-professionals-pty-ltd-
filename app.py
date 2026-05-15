@@ -96,92 +96,255 @@ HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>Automotive Professionals</title>
+<title>Automotive Professionals Pty Ltd</title>
 
 <style>
 body{
 margin:0;
-font-family:Arial;
+font-family:Segoe UI, Arial;
 color:white;
 background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
 }
 
-.overlay{background:rgba(0,0,0,0.75);min-height:100vh;}
-
-.nav{display:flex;justify-content:space-between;padding:15px;background:#111;}
-.nav a{color:white;margin:0 10px;text-decoration:none}
-
-.hero{text-align:center;padding:60px}
-.hero h1{color:#25D366;font-size:40px}
-
-.card{
-background:#1c1c1c;
-padding:20px;
-margin:10px;
-border-radius:10px;
+/* DARK OVERLAY */
+.overlay{
+background:rgba(0,0,0,0.78);
+min-height:100vh;
 }
 
-.container{display:flex;justify-content:center;flex-wrap:wrap}
+/* NAV */
+.nav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px 25px;
+background:rgba(0,0,0,0.85);
+backdrop-filter:blur(10px);
+border-bottom:1px solid #222;
+}
 
-.btn{
-background:#25D366;
-padding:10px;
-color:black;
+.logo-area{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.logo{
+width:40px;
+height:40px;
+border-radius:50%;
+background:#222;
+object-fit:cover;
+border:2px solid #25D366;
+}
+
+.nav a{
+color:white;
+margin:0 10px;
 text-decoration:none;
+font-weight:500;
+}
+
+.nav a:hover{
+color:#25D366;
+}
+
+/* HERO */
+.hero{
+text-align:center;
+padding:80px 20px;
+}
+
+.hero-box{
+display:inline-block;
+padding:20px 30px;
+border-radius:15px;
+background:rgba(0,0,0,0.6);
+backdrop-filter:blur(8px);
+border:1px solid #333;
+}
+
+.hero h1{
+margin:0;
+color:#25D366;
+font-size:42px;
+}
+
+.hero p{
+opacity:0.8;
+margin-top:10px;
+}
+
+/* MAIN LAYOUT */
+.container{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:20px;
+padding:40px;
+}
+
+/* GLASS CARD */
+.card{
+background:rgba(20,20,20,0.85);
+backdrop-filter:blur(10px);
+padding:22px;
+width:300px;
+border-radius:15px;
+border:1px solid #333;
+transition:0.3s;
+}
+
+.card:hover{
+transform:translateY(-8px);
+border-color:#25D366;
+}
+
+/* INPUTS */
+input,select{
+width:100%;
+padding:10px;
+margin:8px 0;
+border-radius:8px;
+border:1px solid #333;
+background:#111;
+color:white;
+outline:none;
+}
+
+input:focus,select:focus{
+border-color:#25D366;
+}
+
+/* BUTTON */
+.btn{
+display:inline-block;
+width:100%;
+padding:12px;
+background:#25D366;
+color:black;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+transition:0.3s;
+}
+
+.btn:hover{
+background:#1fae55;
+transform:scale(1.03);
+}
+
+/* PROFILE SLOT */
+.profile-upload{
+text-align:center;
+padding:10px;
+border:1px dashed #444;
+border-radius:10px;
+margin-bottom:15px;
+color:#aaa;
+}
+
+/* COURSES */
+.course-list p{
+margin:8px 0;
+padding:8px;
+background:#111;
 border-radius:6px;
+border-left:3px solid #25D366;
+}
+
+/* FOOTER */
+footer{
+text-align:center;
+padding:20px;
+opacity:0.6;
+font-size:13px;
 }
 </style>
 </head>
 
 <body>
+
 <div class="overlay">
 
+<!-- NAV -->
 <div class="nav">
-<div>🚗 Automotive</div>
-<div>
-<a href="/">Home</a>
-<a href="/admin">Admin</a>
-</div>
+
+    <div class="logo-area">
+        <div class="logo"></div>
+        <div><b>Automotive Professionals</b></div>
+    </div>
+
+    <div>
+        <a href="/">Home</a>
+        <a href="/admin">Admin</a>
+        <a href="/login">Login</a>
+    </div>
+
 </div>
 
+<!-- HERO -->
 <div class="hero">
-<h1>{{h}}</h1>
+    <div class="hero-box">
+        <h1>{{h}}</h1>
+        <p>Excellence Through Practical Automotive Training</p>
+    </div>
 </div>
 
+<!-- CONTENT -->
 <div class="container">
 
-<div class="card">
-<h3>Apply</h3>
-<form method="POST" action="/apply" enctype="multipart/form-data">
-<input name="name" placeholder="Name"><br><br>
-<input name="phone" placeholder="Phone"><br><br>
-<input name="email" placeholder="Email"><br><br>
+    <!-- APPLY -->
+    <div class="card">
 
-<select name="course">
-{% for c in courses %}
-<option>{{c}}</option>
-{% endfor %}
-</select><br><br>
+        <h3>Student Application</h3>
 
-<input type="file" name="file"><br><br>
+        <!-- PROFILE SLOT (future admin upload) -->
+        <div class="profile-upload">
+            Institution Logo Slot (Admin Upload)
+        </div>
 
-<button class="btn">Submit</button>
-</form>
+        <form method="POST" action="/apply" enctype="multipart/form-data">
+
+            <input name="name" placeholder="Full Name" required>
+            <input name="phone" placeholder="Phone Number" required>
+            <input name="email" placeholder="Email Address" required>
+
+            <select name="course">
+                {% for c in courses %}
+                <option>{{c}}</option>
+                {% endfor %}
+            </select>
+
+            <input type="file" name="file" required>
+
+            <button class="btn">Submit Application</button>
+
+        </form>
+    </div>
+
+    <!-- COURSES -->
+    <div class="card">
+        <h3>Available Courses</h3>
+        <div class="course-list">
+            {% for c in courses %}
+            <p>{{c}}</p>
+            {% endfor %}
+        </div>
+    </div>
+
 </div>
 
-<div class="card">
-<h3>Courses</h3>
-{% for c in courses %}
-<p>{{c}}</p>
-{% endfor %}
-</div>
+<footer>
+© 2026 Automotive Professionals (Pty) Ltd | Built for real training systems
+</footer>
 
 </div>
-</div>
+
 </body>
 </html>
 """
-
 
 # ---------------- ROUTES ----------------
 @app.route("/")
