@@ -712,7 +712,8 @@ def apply():
     <a href='/'>Back Home</a>
     """
 
-@app.route("/admin/workshop_dashboard")
+
+@app.route("/admin/workshop")
 def workshop_dashboard():
 
     if not session.get("admin"):
