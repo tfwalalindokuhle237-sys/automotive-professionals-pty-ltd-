@@ -327,7 +327,7 @@ margin-top:20px;
 <div class="hero">
     <div class="hero-box">
         <h1>{{h}}</h1>
-        <p>Excellence Through Practical Automotive Teaching</p>
+        <p>Excellence Through Practical Teaching</p>
     </div>
 </div>
 
