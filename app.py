@@ -21,7 +21,6 @@ ADMIN_PASSWORD = "1234"
 MAIL_SENDER = "your_email@gmail.com"
 MAIL_PASSWORD = "your_app_password"
 
-
 # ---------------- DATABASE ----------------
 def db():
     conn = sqlite3.connect("site.db")
@@ -52,17 +51,19 @@ def init():
         id INTEGER PRIMARY KEY,
         hero TEXT,
         whatsapp TEXT,
-        courses TEXT
+        courses TEXT,
+        logo TEXT
     )
     """)
 
-    # DEFAULT DATA (YOUR COURSES)
+    # DEFAULT DATA (YOUR UPDATED STRUCTURE)
     c.execute("""
     INSERT OR IGNORE INTO settings VALUES (
         1,
         'Automotive Training Centre',
         '26876783891',
-        'Level 3 - Full Course (18 Months): Heavy Plant Mechanics, Light Motor Mechanics | 6 Month Course: Welding | Short Courses: Engine Management & Diagnosis, General Maintenance'
+        'Level 3 - Heavy Plant Mechanics,Light Motor Mechanics | 6 Month - Welding | Short - Engine Diagnosis,General Maintenance',
+        ''
     )
     """)
 
@@ -223,15 +224,13 @@ color:#aaa;
 
 <div class="nav">
     <div style="display:flex;align-items:center;gap:10px;">
-        <div class="logo"></div>
+        {% if logo %}
+            <img src="/uploads/{{logo}}" class="logo">
+        {% else %}
+            <div class="logo"></div>
+        {% endif %}
         <b>Automotive Professionals</b>
     </div>
-    <div>
-        <a href="/">Home</a>
-        <a href="/admin">Admin</a>
-    </div>
-</div>
-
 <div class="hero">
     <h1>{{h}}</h1>
 </div>
@@ -285,10 +284,28 @@ color:#aaa;
 # ---------------- ROUTES ----------------
 @app.route("/")
 def home():
-    s = settings()
-    return render_template_string(HTML, h=s["hero"], courses=s["courses"].split(","))
+    s = get_settings()
+
+    courses = []
+    for block in s["courses"].split("|"):
+        courses += block.split(",")
+
+    return render_template_string(HTML,
+        h=s["hero"],
+        courses=courses,
+        logo=s["logo"]
+    )
+def get_settings():
+    return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
 
 
+def update_settings(hero, whatsapp, courses, logo):
+    db().execute("""
+    UPDATE settings
+    SET hero=?, whatsapp=?, courses=?, logo=?
+    WHERE id=1
+    """, (hero, whatsapp, courses, logo))
+    db().commit()
 @app.route("/apply", methods=["POST"])
 def apply():
     f = save(request.files.get("file"))
@@ -315,22 +332,83 @@ def apply():
     """
 
 
-@app.route("/admin")
+@app.route("/admin", methods=["GET","POST"])
 def admin():
     if not session.get("admin"):
         return redirect("/")
 
+    s = get_settings()
+
+    # SAVE UPDATES
+    if request.method == "POST":
+        hero = request.form["hero"]
+        whatsapp = request.form["whatsapp"]
+        courses = request.form["courses"]
+
+        update_settings(hero, whatsapp, courses, s["logo"])
+        return redirect("/admin")
+
     data = db().execute("SELECT * FROM applications ORDER BY id DESC").fetchall()
 
-    html = "<h1>ADMIN DASHBOARD</h1><table border='1' style='width:100%;font-family:Arial'>"
-    html += "<tr><th>Name</th><th>Phone</th><th>Course</th><th>Date</th></tr>"
+    return render_template_string("""
+    <style>
+    body{font-family:Arial;background:#111;color:white;padding:20px}
+    input,textarea{width:100%;padding:10px;margin:5px 0}
+    .box{background:#1c1c1c;padding:15px;border-radius:10px;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #333;padding:8px}
+    th{background:#25D366;color:black}
+    </style>
 
-    for r in data:
-        html += f"<tr><td>{r['name']}</td><td>{r['phone']}</td><td>{r['course']}</td><td>{r['date']}</td></tr>"
+    <h1>ADMIN CONTROL PANEL</h1>
 
-    html += "</table>"
-    return html
+    <div class="box">
+        <h3>Edit Website</h3>
 
+        <form method="POST">
+            <input name="hero" value="{{s.hero}}" placeholder="Hero Text">
+            <input name="whatsapp" value="{{s.whatsapp}}" placeholder="WhatsApp Number">
+            <textarea name="courses">{{s.courses}}</textarea>
+            <button>Save Changes</button>
+        </form>
+    </div>
+
+    <div class="box">
+        <h3>Upload Logo</h3>
+        <form method="POST" action="/upload_logo" enctype="multipart/form-data">
+            <input type="file" name="logo">
+            <button>Upload</button>
+        </form>
+    </div>
+
+    <div class="box">
+        <h3>Applications</h3>
+        <table>
+        <tr><th>Name</th><th>Phone</th><th>Course</th><th>Date</th></tr>
+        {% for r in data %}
+        <tr>
+            <td>{{r.name}}</td>
+            <td>{{r.phone}}</td>
+            <td>{{r.course}}</td>
+            <td>{{r.date}}</td>
+        </tr>
+        {% endfor %}
+        </table>
+    </div>
+    """, s=s, data=data)
+
+@app.route("/upload_logo", methods=["POST"])
+def upload_logo():
+    if not session.get("admin"):
+        return redirect("/login")
+
+    file = request.files.get("logo")
+    if file:
+        filename = save(file)
+        db().execute("UPDATE settings SET logo=? WHERE id=1", (filename,))
+        db().commit()
+
+    return redirect("/admin")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
