@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "change_this_key"
+app.secret_key = "secure_key_change_me"
 
 # ---------------- DATABASE ----------------
 def init_db():
@@ -26,38 +26,73 @@ init_db()
 
 # ---------------- SETTINGS ----------------
 ADMIN_PASSWORD = "1234"
-WHATSAPP_NUMBER = "26800000000"
+WHATSAPP_NUMBER = "26876783891"
 
 # ---------------- WHATSAPP ----------------
 def whatsapp_link(name, phone, course):
     msg = f"New Application:%0AName: {name}%0APhone: {phone}%0ACourse: {course}"
     return f"https://wa.me/{WHATSAPP_NUMBER}?text={msg}"
 
-# ---------------- FRONTEND ----------------
+# ---------------- HTML ----------------
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>Automotive Professionals</title>
+<title>Automotive Professionals (Pty) Ltd</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b0b0b;color:white;}
-
-.nav{
-    display:flex;justify-content:space-between;
-    padding:15px;background:#111;
+body{
+    margin:0;
+    font-family:Arial;
+    background:#0b0b0b;
+    color:white;
 }
-.nav a{color:white;margin:0 10px;text-decoration:none;}
-.logo{color:#25D366;font-weight:bold;}
 
+/* NAV */
+.nav{
+    display:flex;
+    justify-content:space-between;
+    padding:15px 25px;
+    background:#111;
+    position:sticky;
+    top:0;
+}
+.nav a{
+    color:white;
+    margin:0 10px;
+    text-decoration:none;
+}
+.logo{
+    color:#25D366;
+    font-weight:bold;
+}
+
+/* HERO */
 .hero{
     text-align:center;
     padding:70px;
     background:linear-gradient(135deg,#111,#2a0000);
 }
+.hero h1{
+    color:#25D366;
+    font-size:45px;
+}
+.hero p{
+    opacity:0.8;
+}
 
-.hero h1{color:#25D366;font-size:45px;}
+/* BUTTON */
+.btn{
+    display:inline-block;
+    padding:10px 15px;
+    background:#25D366;
+    color:black;
+    border-radius:6px;
+    text-decoration:none;
+    margin-top:10px;
+}
 
+/* CARDS */
 .container{
     display:flex;
     justify-content:center;
@@ -65,35 +100,29 @@ body{margin:0;font-family:Arial;background:#0b0b0b;color:white;}
     flex-wrap:wrap;
     padding:40px;
 }
-
 .card{
     background:#1a1a1a;
     padding:20px;
-    width:260px;
+    width:280px;
     border-radius:10px;
+    text-align:center;
 }
 
+/* FORM */
 input,select{
     padding:10px;
     width:240px;
-    margin:5px;
-}
-
-button{
-    padding:10px 15px;
-    background:#25D366;
+    margin:6px;
     border:none;
-    color:black;
-    cursor:pointer;
+    border-radius:5px;
 }
 
-a.btn{
-    background:#25D366;
-    padding:10px;
-    display:inline-block;
-    margin-top:10px;
-    color:black;
-    text-decoration:none;
+/* FOOTER */
+footer{
+    text-align:center;
+    padding:20px;
+    background:#111;
+    margin-top:30px;
 }
 </style>
 </head>
@@ -104,18 +133,41 @@ a.btn{
     <div class="logo">🚗 Automotive Professionals</div>
     <div>
         <a href="/">Home</a>
+        <a href="#courses">Courses</a>
         <a href="/login">Admin</a>
     </div>
 </div>
 
 <div class="hero">
-    <h1>Excellence Through Practical Training</h1>
-    <p>Apply below to join our institution</p>
+    <h1>Excellence Through Practical Teaching</h1>
+    <p>Training skilled automotive professionals in Eswatini</p>
+    <a class="btn" href="#apply">Apply Now</a>
 </div>
 
-<div class="container">
+<div class="container" id="courses">
 
-    <!-- STUDENT APPLICATION (B SYSTEM) -->
+    <div class="card">
+        <h2>Level 3 (12 Months)</h2>
+        <p>Heavy Plant Mechanics</p>
+        <p>Light Motor Mechanics</p>
+    </div>
+
+    <div class="card">
+        <h2>6-Month Course</h2>
+        <p>Welding Training</p>
+    </div>
+
+    <div class="card">
+        <h2>Short Courses</h2>
+        <p>Engine Diagnosis</p>
+        <p>Vehicle Maintenance</p>
+    </div>
+
+</div>
+
+<div class="container" id="apply">
+
+    <!-- APPLY FORM -->
     <div class="card">
         <h2>Apply Now</h2>
 
@@ -130,27 +182,26 @@ a.btn{
                 <option>Welding Training</option>
             </select><br>
 
-            <button type="submit">Submit</button>
+            <button class="btn" type="submit">Submit Application</button>
         </form>
     </div>
 
-    <!-- COURSES -->
-    <div class="card">
-        <h2>Courses</h2>
-        <p>✔ Heavy Plant Mechanics</p>
-        <p>✔ Light Motor Mechanics</p>
-        <p>✔ Welding Training</p>
-    </div>
-
-    <!-- CONTACT + WHATSAPP (C SYSTEM) -->
+    <!-- CONTACT -->
     <div class="card">
         <h2>Contact</h2>
-        <p>📞 +268 76783891</p>
+        <p>📞 +268 7678 3891</p>
+        <p>📞 +268 7968 3891</p>
+        <p>📞 +268 7678 3819</p>
         <p>📧 takernkambule@gmail.com</p>
-        <a class="btn" href="https://wa.me/26800000000">WhatsApp</a>
+
+        <a class="btn" href="https://wa.me/26876783891">WhatsApp Us</a>
     </div>
 
 </div>
+
+<footer>
+    © 2026 Automotive Professionals (Pty) Ltd
+</footer>
 
 </body>
 </html>
@@ -162,7 +213,7 @@ a.btn{
 def home():
     return render_template_string(HTML)
 
-# ---------------- APPLY (STUDENT SYSTEM B) ----------------
+# ---------------- APPLY (STUDENT SYSTEM) ----------------
 @app.route("/apply", methods=["POST"])
 def apply():
     name = request.form["name"]
@@ -178,16 +229,15 @@ def apply():
     conn.commit()
     conn.close()
 
-    # WhatsApp automation (C SYSTEM)
     link = whatsapp_link(name, phone, course)
 
     return f"""
     <h2>Application Submitted ✅</h2>
-    <a href="{link}" target="_blank">Send WhatsApp Notification</a><br><br>
-    <a href="/">Go Back</a>
+    <a href="{link}" class="btn" target="_blank">Send WhatsApp Message</a><br><br>
+    <a href="/">Back Home</a>
     """
 
-# ---------------- LOGIN (ADMIN SYSTEM D) ----------------
+# ---------------- LOGIN ----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -197,8 +247,8 @@ def login():
         return "Wrong Password"
 
     return """
+    <h2>Admin Login</h2>
     <form method='POST'>
-        <h2>Admin Login</h2>
         <input name='password' placeholder='Password'>
         <button type='submit'>Login</button>
     </form>
