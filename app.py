@@ -62,7 +62,7 @@ def init():
         1,
         'Automotive Training Centre',
         '26876783891',
-        'Level 3 18 Months - Heavy Plant Mechanics,Light Motor Mechanics | 6 Month - Welding | Short Courses- Engine Management And Diagnosis,General Maintenance',
+        '12 Months - Heavy Plant Mechanics,Light Motor Mechanics | 6 Months - Welding | Short Courses- Engine Management And Diagnosis,General Maintenance',
         ''
     )
     """)
