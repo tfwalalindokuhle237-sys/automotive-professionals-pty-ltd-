@@ -1085,6 +1085,7 @@ def generate_invoice(job_id):
     if not job:
         return "Job not found"
 
+    # ---------------- SAFE CALCULATIONS ----------------
     labor = float(job["labor_cost"] or 0)
     parts = float(job["parts_cost"] or 0)
     paid = float(job["amount_paid"] or 0)
@@ -1092,126 +1093,60 @@ def generate_invoice(job_id):
     total = labor + parts
     balance = total - paid
 
+    # ---------------- INVOICE NUMBER ----------------
     invoice_number = job["invoice_no"]
 
-    filename = f"{invoice_number}.pdf"
+    # ---------------- FILE SETUP ----------------
+    os.makedirs("uploads", exist_ok=True)
 
+    filename = f"{invoice_number}.pdf"
     filepath = os.path.join("uploads", filename)
 
     doc = SimpleDocTemplate(filepath, pagesize=A4)
-
     styles = getSampleStyleSheet()
 
     content = []
 
-    content.append(
-        Paragraph(
-            "AUTOMOTIVE PROFESSIONALS PTY LTD",
-            styles["Title"]
-        )
-    )
+    # ---------------- HEADER ----------------
+    content.append(Paragraph("AUTOMOTIVE WORKSHOP INVOICE", styles["Title"]))
+    content.append(Spacer(1, 12))
+
+    content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
+    content.append(Paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}", styles["Normal"]))
 
     content.append(Spacer(1, 12))
 
-    content.append(
-        Paragraph(
-            f"Invoice Number: {invoice_number}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Date: {datetime.now().strftime('%Y-%m-%d')}",
-            styles["Normal"]
-        )
-    )
+    # ---------------- CUSTOMER INFO (FIXED FIELDS) ----------------
+    content.append(Paragraph(f"Customer: {job['customer']}", styles["Normal"]))
+    content.append(Paragraph(f"Phone: {job['phone']}", styles["Normal"]))
+    content.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["Normal"]))
+    content.append(Paragraph(f"Plate Number: {job['plate']}", styles["Normal"]))
 
     content.append(Spacer(1, 12))
 
-    content.append(
-        Paragraph(
-            f"Customer: {job['customer_name']}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Phone: {job['phone']}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Plate Number: {job['registration']}",
-            styles["Normal"]
-        )
-    )
+    # ---------------- JOB INFO ----------------
+    content.append(Paragraph(f"Problem: {job['problem']}", styles["Normal"]))
 
     content.append(Spacer(1, 12))
 
-    content.append(
-        Paragraph(
-            f"Problem: {job['problem']}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(Spacer(1, 12))
-
-    content.append(
-        Paragraph(
-            f"Labor Cost: R {labor}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Parts Cost: R {parts}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Total Cost: R {total}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Amount Paid: R {paid}",
-            styles["Normal"]
-        )
-    )
-
-    content.append(
-        Paragraph(
-            f"Balance Due: R {balance}",
-            styles["Normal"]
-        )
-    )
+    # ---------------- COST BREAKDOWN ----------------
+    content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
+    content.append(Paragraph(f"Parts Cost: R {parts}", styles["Normal"]))
+    content.append(Paragraph(f"Total Cost: R {total}", styles["Normal"]))
+    content.append(Paragraph(f"Amount Paid: R {paid}", styles["Normal"]))
+    content.append(Paragraph(f"Balance Due: R {balance}", styles["Normal"]))
 
     content.append(Spacer(1, 20))
 
+    # ---------------- FOOTER ----------------
     content.append(
         Paragraph(
-            "Thank you for choosing Automotive Professionals Pty Ltd",
+            "Thank you for choosing our workshop service.",
             styles["Normal"]
         )
     )
 
+    # ---------------- BUILD PDF ----------------
     doc.build(content)
 
     return send_from_directory(
@@ -1219,7 +1154,6 @@ def generate_invoice(job_id):
         filename,
         as_attachment=True
     )
-
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
