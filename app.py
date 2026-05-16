@@ -1224,11 +1224,13 @@ def edit_job(job_id):
     """, j=job)
 
 # ---------------- FIXED ADMIN LAYOUT ----------------
+# ---------------- FIXED ADMIN HTML (LAYOUT ONLY) ----------------
 ADMIN_LAYOUT = """
 <!DOCTYPE html>
 <html>
 <head>
 <title>ERP Admin Panel</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -1278,7 +1280,7 @@ flex:1;
 padding:20px;
 }
 
-/* CARD */
+/* CARDS */
 .card{
 background:rgba(20,20,20,0.9);
 padding:15px;
@@ -1296,6 +1298,7 @@ cursor:pointer;
 font-weight:bold;
 }
 </style>
+
 </head>
 
 <body>
@@ -1304,6 +1307,7 @@ font-weight:bold;
 
     <div class="sidebar">
         <h2>ERP MENU</h2>
+
         <a href="/admin">📊 Dashboard</a>
         <a href="/admin/students">👨‍🎓 Students</a>
         <a href="/admin/fees">💰 Fees</a>
@@ -1322,70 +1326,6 @@ font-weight:bold;
 </body>
 </html>
 """
-@app.route("/admin", methods=["GET", "POST"])
-def admin():
-
-    if not session.get("admin"):
-        return redirect("/login")
-
-    s = get_settings()
-
-    # UPDATE SETTINGS
-    if request.method == "POST":
-        conn = db()
-        conn.execute("""
-            UPDATE settings
-            SET hero=?, whatsapp=?, courses=?
-            WHERE id=1
-        """, (
-            request.form["hero"],
-            request.form["whatsapp"],
-            request.form["courses"]
-        ))
-        conn.commit()
-        conn.close()
-        return redirect("/admin")
-
-    conn = db()
-
-    # APPLICATIONS
-    applications = conn.execute("""
-        SELECT * FROM applications ORDER BY id DESC
-    """).fetchall()
-
-    # STUDENTS
-    students = conn.execute("""
-        SELECT * FROM students ORDER BY id DESC
-    """).fetchall()
-
-    # FILES
-    files = conn.execute("""
-        SELECT * FROM files ORDER BY id DESC
-    """).fetchall()
-
-    conn.close()
-
-    # 📊 SIMPLE STATS (for dashboard later)
-    stats = {
-        "applications": len(applications),
-        "students": len(students),
-        "files": len(files)
-    }
-
-    # RENDER INSIDE ERP LAYOUT
-    content = render_template_string(
-        ADMIN_HTML,
-        s=s,
-        data=applications,
-        students=students,
-        files=files,
-        stats=stats
-    )
-
-    return render_template_string(
-        ADMIN_LAYOUT,
-        content=content
-    )
 
 @app.route("/admin/student_statement/<int:student_id>")
 def student_statement(student_id):
