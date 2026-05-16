@@ -911,7 +911,7 @@ def create_jobcard():
                 registration,
                 vin,
                 mileage,
-                issue,
+                problem,
                 diagnosis,
                 repair_notes,
                 assigned_mechanic,
@@ -933,7 +933,7 @@ def create_jobcard():
             request.form["registration"],
             request.form["vin"],
             request.form["mileage"],
-            request.form["issue"],
+            request.form["problem"],
             "",
             "",
             request.form["mechanic"],
@@ -1003,7 +1003,7 @@ def create_jobcard():
         <input name="vin" placeholder="VIN Number">
         <input name="mileage" placeholder="Mileage">
 
-        <textarea name="issue" placeholder="Problem Description"></textarea>
+        <textarea name="problem" placeholder="Problem Description"></textarea>
 
         <input name="mechanic" placeholder="Assign Mechanic">
 
