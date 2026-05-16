@@ -1223,13 +1223,12 @@ def edit_job(job_id):
     </form>
     """, j=job)
 
-# ---------------- FIXED ADMIN HTML (ADDED) ----------------
+# ---------------- FIXED ADMIN LAYOUT ----------------
 ADMIN_LAYOUT = """
 <!DOCTYPE html>
 <html>
 <head>
 <title>ERP Admin Panel</title>
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -1279,7 +1278,7 @@ flex:1;
 padding:20px;
 }
 
-/* CARDS */
+/* CARD */
 .card{
 background:rgba(20,20,20,0.9);
 padding:15px;
@@ -1297,7 +1296,6 @@ cursor:pointer;
 font-weight:bold;
 }
 </style>
-
 </head>
 
 <body>
@@ -1306,7 +1304,6 @@ font-weight:bold;
 
     <div class="sidebar">
         <h2>ERP MENU</h2>
-
         <a href="/admin">📊 Dashboard</a>
         <a href="/admin/students">👨‍🎓 Students</a>
         <a href="/admin/fees">💰 Fees</a>
@@ -1325,168 +1322,6 @@ font-weight:bold;
 </body>
 </html>
 """
-ADMIN_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-<title>Workshop Admin Panel</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body{
-margin:0;
-font-family:Arial;
-color:white;
-background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
-}
-
-.overlay{
-background:rgba(0,0,0,0.85);
-min-height:100vh;
-padding:20px;
-}
-
-/* HEADER */
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:15px;
-background:rgba(0,0,0,0.7);
-border:1px solid #333;
-border-radius:10px;
-}
-
-.title{
-font-size:22px;
-color:#25D366;
-font-weight:bold;
-}
-
-/* GRID */
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-gap:20px;
-margin-top:20px;
-}
-
-/* CARD */
-.card{
-background:rgba(20,20,20,0.9);
-padding:15px;
-border-radius:10px;
-border:1px solid #333;
-}
-
-.card h3{
-color:#25D366;
-}
-
-/* TABLE */
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-th,td{
-border:1px solid #333;
-padding:8px;
-font-size:13px;
-}
-
-th{
-background:#111;
-color:#25D366;
-}
-
-/* BUTTON */
-.btn{
-background:#25D366;
-border:none;
-padding:10px;
-width:100%;
-font-weight:bold;
-cursor:pointer;
-}
-
-input,textarea{
-width:100%;
-padding:8px;
-margin:5px 0;
-background:#111;
-color:white;
-border:1px solid #333;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="overlay">
-
-<div class="header">
-    <div class="title">🔧 Automotive Workshop Admin</div>
-    <a href="/logout" style="color:white;">Logout</a>
-</div>
-
-<div class="grid">
-
-    <!-- SETTINGS -->
-    <div class="card">
-        <h3>Institution Settings</h3>
-        <form method="POST" action="/admin">
-            <input name="hero" value="{{s['hero']}}">
-            <input name="whatsapp" value="{{s['whatsapp']}}">
-            <textarea name="courses">{{s['courses']}}</textarea>
-            <button class="btn">Save Settings</button>
-        </form>
-    </div>
-
-    <!-- APPLICATIONS -->
-    <div class="card">
-        <h3>New Applications</h3>
-        <table>
-        <tr><th>Name</th><th>Course</th><th>Date</th></tr>
-        {% for row in data %}
-        <tr>
-            <td>{{row['name']}}</td>
-            <td>{{row['course']}}</td>
-            <td>{{row['date']}}</td>
-        </tr>
-        {% endfor %}
-        </table>
-    </div>
-
-    <!-- STUDENTS -->
-    <div class="card">
-        <h3>Registered Students</h3>
-        <p style="opacity:0.7">(Feature ready for expansion)</p>
-    </div>
-
-    <!-- FILES -->
-    <div class="card">
-        <h3>Institution Files</h3>
-
-        <form method="POST" action="/upload_file" enctype="multipart/form-data">
-            <input type="file" name="file">
-            <input name="desc" placeholder="File description">
-            <button class="btn">Upload File</button>
-        </form>
-
-    </div>
-
-</div>
-
-</div>
-
-</body>
-</html>
-"""
-
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
 
