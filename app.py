@@ -87,7 +87,7 @@ def init():
     )
     """)
 
-    # ---------------- WORKSHOP JOBS (FULL ERP VERSION) ----------------
+    # ---------------- WORKSHOP JOBS (ADDED EXACTLY AS REQUESTED) ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS workshop_jobs(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,30 +96,16 @@ def init():
 
         customer_name TEXT,
         phone TEXT,
-        address TEXT,
-
-        vehicle_make TEXT,
-        vehicle_model TEXT,
-        registration TEXT,
-        vin TEXT,
-        mileage TEXT,
-
+        vehicle TEXT,
+        plate TEXT,
         problem TEXT,
-        diagnosis TEXT,
-        repair_notes TEXT,
-
-        assigned_mechanic TEXT,
 
         labor_cost REAL,
         parts_cost REAL,
-        total_cost REAL,
         amount_paid REAL,
 
-        deadline TEXT,
-        status TEXT,
-
-        date_received TEXT,
-        date_completed TEXT
+        date_in TEXT,
+        status TEXT
     )
     """)
 
@@ -161,7 +147,6 @@ def init():
 
 
 init()
-
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -729,34 +714,50 @@ def workshop():
 
     conn = db()
 
-    # ADD CAR / JOB
     if request.method == "POST":
 
-        invoice = "INV" + datetime.now().strftime("%Y%m%d%H%M%S")
+        invoice = "INV-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+        labor = float(request.form["labor_cost"] or 0)
+        parts = float(request.form["parts_cost"] or 0)
+        paid = float(request.form["amount_paid"] or 0)
 
         conn.execute("""
             INSERT INTO workshop_jobs(
-                invoice_no, customer, phone, plate, vehicle, problem,
-                labor_cost, parts_cost, amount_paid, date_in, status
+                invoice_no,
+                customer_name,
+                phone,
+                vehicle,
+                plate,
+                problem,
+                labor_cost,
+                parts_cost,
+                amount_paid,
+                date_in,
+                status
             )
             VALUES(?,?,?,?,?,?,?,?,?,?,?)
         """, (
             invoice,
-            request.form["customer"],
+            request.form["customer_name"],
             request.form["phone"],
-            request.form["plate"],
             request.form["vehicle"],
+            request.form["plate"],
             request.form["problem"],
-            float(request.form["labor_cost"]),
-            float(request.form["parts_cost"]),
-            float(request.form["amount_paid"]),
+            labor,
+            parts,
+            paid,
             datetime.now().strftime("%Y-%m-%d"),
             "IN PROGRESS"
         ))
 
         conn.commit()
+        return redirect("/admin/workshop")
 
-    jobs = conn.execute("SELECT * FROM workshop_jobs ORDER BY id DESC").fetchall()
+    jobs = conn.execute("""
+        SELECT * FROM workshop_jobs ORDER BY id DESC
+    """).fetchall()
+
     conn.close()
 
     return render_template_string("""
@@ -764,7 +765,7 @@ def workshop():
     body{
         margin:0;
         font-family:Arial;
-        background:url('https://images.unsplash.com/photo-1487754180451-c456f719a1fc') center/cover fixed;
+        background:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70') center/cover fixed;
         color:white;
     }
 
@@ -779,20 +780,21 @@ def workshop():
         padding:15px;
         border-radius:10px;
         margin-bottom:15px;
+        border:1px solid #333;
     }
 
-    input{
+    input,textarea{
         width:100%;
         padding:10px;
-        margin:5px 0;
+        margin:6px 0;
         background:#111;
         color:white;
         border:1px solid #333;
     }
 
     button{
-        padding:10px;
         background:#25D366;
+        padding:10px;
         border:none;
         font-weight:bold;
         cursor:pointer;
@@ -810,77 +812,57 @@ def workshop():
     }
 
     th{background:#111;color:#25D366;}
-
-    .back{
-        display:inline-block;
-        margin-bottom:10px;
-        color:#25D366;
-        text-decoration:none;
-    }
     </style>
 
     <div class="overlay">
 
-    <a href="/admin" class="back">⬅ Back to Dashboard</a>
-
     <div class="card">
-        <h2>🚗 Add Workshop Job</h2>
+        <h2>🚗 Workshop Job Card</h2>
 
         <form method="POST">
 
-            <input name="customer" placeholder="Customer Name" required>
+            <input name="customer_name" placeholder="Customer Name" required>
             <input name="phone" placeholder="Phone" required>
+            <input name="vehicle" placeholder="Vehicle" required>
             <input name="plate" placeholder="Plate Number" required>
-            <input name="vehicle" placeholder="Vehicle Model" required>
-            <input name="problem" placeholder="Problem Description" required>
 
-            <input name="labor_cost" placeholder="Labor Cost" required>
-            <input name="parts_cost" placeholder="Parts Cost" required>
-            <input name="amount_paid" placeholder="Amount Paid" required>
+            <textarea name="problem" placeholder="Problem"></textarea>
 
-            <button>Add Job</button>
+            <input name="labor_cost" placeholder="Labor Cost">
+            <input name="parts_cost" placeholder="Parts Cost">
+            <input name="amount_paid" placeholder="Amount Paid">
 
+            <button>Create Job</button>
         </form>
     </div>
 
     <div class="card">
+        <h3>📋 Jobs</h3>
 
-    <h3>📋 Active Jobs</h3>
+        <table>
+            <tr>
+                <th>Invoice</th>
+                <th>Customer</th>
+                <th>Vehicle</th>
+                <th>Plate</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+            </tr>
 
-    <table>
-        <tr>
-            <th>Invoice</th>
-            <th>Customer</th>
-            <th>Vehicle</th>
-            <th>Plate</th>
-            <th>Cost</th>
-            <th>Paid</th>
-            <th>Balance</th>
-            <th>Status</th>
-        </tr>
+            {% for j in jobs %}
+            <tr>
+                <td>{{j.invoice_no}}</td>
+                <td>{{j.customer_name}}</td>
+                <td>{{j.vehicle}}</td>
+                <td>{{j.plate}}</td>
 
-        {% for j in jobs %}
-
-        <tr>
-            <td>{{j.invoice_no}}</td>
-            <td>{{j.customer}}</td>
-            <td>{{j.vehicle}}</td>
-            <td>{{j.plate}}</td>
-
-            <td>R {{j.labor_cost + j.parts_cost}}</td>
-            <td>R {{j.amount_paid}}</td>
-
-            <td>
-                R {{(j.labor_cost + j.parts_cost) - j.amount_paid}}
-            </td>
-
-            <td>{{j.status}}</td>
-        </tr>
-
-        {% endfor %}
-
-    </table>
-
+                <td>R {{(j.labor_cost or 0) + (j.parts_cost or 0)}}</td>
+                <td>R {{j.amount_paid}}</td>
+                <td>R {{((j.labor_cost or 0) + (j.parts_cost or 0)) - (j.amount_paid or 0)}}</td>
+            </tr>
+            {% endfor %}
+        </table>
     </div>
 
     </div>
@@ -1076,8 +1058,7 @@ def generate_invoice(job_id):
     conn = db()
 
     job = conn.execute("""
-        SELECT * FROM workshop_jobs
-        WHERE id=?
+        SELECT * FROM workshop_jobs WHERE id=?
     """, (job_id,)).fetchone()
 
     conn.close()
@@ -1085,7 +1066,6 @@ def generate_invoice(job_id):
     if not job:
         return "Job not found"
 
-    # ---------------- SAFE CALCULATIONS ----------------
     labor = float(job["labor_cost"] or 0)
     parts = float(job["parts_cost"] or 0)
     paid = float(job["amount_paid"] or 0)
@@ -1093,67 +1073,35 @@ def generate_invoice(job_id):
     total = labor + parts
     balance = total - paid
 
-    # ---------------- INVOICE NUMBER ----------------
-    invoice_number = job["invoice_no"]
+    filename = f"{job['invoice_no']}.pdf"
+    filepath = filename
 
-    # ---------------- FILE SETUP ----------------
-    os.makedirs("uploads", exist_ok=True)
-
-    filename = f"{invoice_number}.pdf"
-    filepath = os.path.join("uploads", filename)
-
-    doc = SimpleDocTemplate(filepath, pagesize=A4)
+    doc = SimpleDocTemplate(filepath)
     styles = getSampleStyleSheet()
 
-    content = []
+    elements = []
 
-    # ---------------- HEADER ----------------
-    content.append(Paragraph("AUTOMOTIVE WORKSHOP INVOICE", styles["Title"]))
-    content.append(Spacer(1, 12))
+    elements.append(Paragraph("<b>Automotive Workshop Invoice</b>", styles["Title"]))
+    elements.append(Spacer(1, 10))
 
-    content.append(Paragraph(f"Invoice Number: {invoice_number}", styles["Normal"]))
-    content.append(Paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}", styles["Normal"]))
+    elements.append(Paragraph(f"Invoice: {job['invoice_no']}", styles["BodyText"]))
+    elements.append(Paragraph(f"Customer: {job['customer_name']}", styles["BodyText"]))
+    elements.append(Paragraph(f"Phone: {job['phone']}", styles["BodyText"]))
+    elements.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["BodyText"]))
+    elements.append(Paragraph(f"Plate: {job['plate']}", styles["BodyText"]))
 
-    content.append(Spacer(1, 12))
+    elements.append(Spacer(1, 10))
 
-    # ---------------- CUSTOMER INFO (FIXED FIELDS) ----------------
-    content.append(Paragraph(f"Customer: {job['customer']}", styles["Normal"]))
-    content.append(Paragraph(f"Phone: {job['phone']}", styles["Normal"]))
-    content.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["Normal"]))
-    content.append(Paragraph(f"Plate Number: {job['plate']}", styles["Normal"]))
+    elements.append(Paragraph(f"Labor: R {labor}", styles["BodyText"]))
+    elements.append(Paragraph(f"Parts: R {parts}", styles["BodyText"]))
+    elements.append(Paragraph(f"Total: R {total}", styles["BodyText"]))
+    elements.append(Paragraph(f"Paid: R {paid}", styles["BodyText"]))
+    elements.append(Paragraph(f"Balance: R {balance}", styles["BodyText"]))
 
-    content.append(Spacer(1, 12))
+    doc.build(elements)
 
-    # ---------------- JOB INFO ----------------
-    content.append(Paragraph(f"Problem: {job['problem']}", styles["Normal"]))
+    return send_from_directory(".", filename, as_attachment=True)
 
-    content.append(Spacer(1, 12))
-
-    # ---------------- COST BREAKDOWN ----------------
-    content.append(Paragraph(f"Labor Cost: R {labor}", styles["Normal"]))
-    content.append(Paragraph(f"Parts Cost: R {parts}", styles["Normal"]))
-    content.append(Paragraph(f"Total Cost: R {total}", styles["Normal"]))
-    content.append(Paragraph(f"Amount Paid: R {paid}", styles["Normal"]))
-    content.append(Paragraph(f"Balance Due: R {balance}", styles["Normal"]))
-
-    content.append(Spacer(1, 20))
-
-    # ---------------- FOOTER ----------------
-    content.append(
-        Paragraph(
-            "Thank you for choosing our workshop service.",
-            styles["Normal"]
-        )
-    )
-
-    # ---------------- BUILD PDF ----------------
-    doc.build(content)
-
-    return send_from_directory(
-        "uploads",
-        filename,
-        as_attachment=True
-    )
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
