@@ -1223,7 +1223,7 @@ def edit_job(job_id):
     </form>
     """, j=job)
 
-# ---------------- FIXED ADMIN LAYOUT ----------------
+
 # ---------------- FIXED ADMIN HTML (LAYOUT ONLY) ----------------
 ADMIN_LAYOUT = """
 <!DOCTYPE html>
