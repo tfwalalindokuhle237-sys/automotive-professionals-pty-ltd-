@@ -885,6 +885,9 @@ def workshop():
 
     </div>
     """, jobs=jobs)
+    
+# ================= WORKSHOP JOB CARD =================
+
 @app.route("/admin/workshop/jobcard", methods=["GET", "POST"])
 def create_jobcard():
 
@@ -893,7 +896,6 @@ def create_jobcard():
 
     conn = db()
 
-    # CREATE JOB CARD
     if request.method == "POST":
 
         labor = float(request.form.get("labor_cost") or 0)
@@ -903,6 +905,7 @@ def create_jobcard():
 
         conn.execute("""
             INSERT INTO workshop_jobs(
+                invoice_no,
                 customer_name,
                 phone,
                 address,
@@ -921,121 +924,301 @@ def create_jobcard():
                 amount_paid,
                 deadline,
                 status,
-                date_received
+                date_received,
+                date_completed
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
+
+            f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+
             request.form["customer_name"],
             request.form["phone"],
             request.form["address"],
+
             request.form["vehicle_make"],
             request.form["vehicle_model"],
             request.form["registration"],
             request.form["vin"],
             request.form["mileage"],
+
             request.form["problem"],
+
             "",
             "",
+
             request.form["mechanic"],
+
             labor,
             parts,
             total,
-            0,
+
+            float(request.form.get("amount_paid") or 0),
+
             request.form["deadline"],
+
             "IN PROGRESS",
-            datetime.now().strftime("%Y-%m-%d")
+
+            datetime.now().strftime("%Y-%m-%d"),
+
+            ""
         ))
 
         conn.commit()
+        conn.close()
+
         return redirect("/admin/workshop")
+
+    conn.close()
 
     return render_template_string("""
 
     <style>
 
     body{
-        font-family:Arial;
         background:#0b0b0b;
+        font-family:Arial;
         color:white;
-        margin:0;
     }
 
     .card{
+        max-width:900px;
+        margin:auto;
+        margin-top:20px;
         background:#151515;
         padding:20px;
-        margin:20px;
         border-radius:10px;
         border:1px solid #333;
     }
 
-    input,textarea{
+    input, textarea{
         width:100%;
-        padding:10px;
-        margin:6px 0;
+        padding:12px;
+        margin-top:8px;
+        margin-bottom:10px;
         background:#111;
         color:white;
         border:1px solid #333;
     }
 
     button{
-        background:#25D366;
+        width:100%;
         padding:12px;
+        background:#25D366;
         border:none;
         font-weight:bold;
         cursor:pointer;
+    }
+
+    a{
+        color:#25D366;
+        text-decoration:none;
     }
 
     </style>
 
     <div class="card">
 
-    <h2>🔧 Create Workshop Job Card</h2>
+        <h2>🚗 Create Workshop Job Card</h2>
 
-    <form method="POST">
+        <form method="POST">
 
-        <input name="customer_name" placeholder="Customer Name" required>
-        <input name="phone" placeholder="Phone Number" required>
-        <input name="address" placeholder="Address">
+            <input name="customer_name" placeholder="Customer Name" required>
 
-        <input name="vehicle_make" placeholder="Vehicle Make (Toyota, BMW...)">
-        <input name="vehicle_model" placeholder="Vehicle Model">
-        <input name="registration" placeholder="Plate Number" required>
-        <input name="vin" placeholder="VIN Number">
-        <input name="mileage" placeholder="Mileage">
+            <input name="phone" placeholder="Phone Number" required>
 
-        <textarea name="problem" placeholder="Problem Description"></textarea>
+            <input name="address" placeholder="Customer Address">
 
-        <input name="mechanic" placeholder="Assign Mechanic">
+            <input name="vehicle_make" placeholder="Vehicle Make">
 
-        <input name="labor_cost" placeholder="Labor Cost (R)">
-        <input name="parts_cost" placeholder="Parts Cost (R)">
+            <input name="vehicle_model" placeholder="Vehicle Model">
 
-        <input name="deadline" type="date">
+            <input name="registration" placeholder="Plate Number" required>
 
-        <button>Create Job Card</button>
+            <input name="vin" placeholder="VIN Number">
 
-    </form>
+            <input name="mileage" placeholder="Mileage">
+
+            <textarea name="problem" placeholder="Vehicle Problem"></textarea>
+
+            <input name="mechanic" placeholder="Assigned Mechanic">
+
+            <input name="labor_cost" placeholder="Labor Cost">
+
+            <input name="parts_cost" placeholder="Parts Cost">
+
+            <input name="amount_paid" placeholder="Amount Paid">
+
+            <input type="date" name="deadline">
+
+            <button>Create Job Card</button>
+
+        </form>
+
+        <br>
+
+        <a href="/admin/workshop">⬅ Back to Workshop</a>
 
     </div>
 
     """)
-    
+
+
+
+# ================= PDF INVOICE GENERATOR =================
+
 @app.route("/admin/invoice/<int:job_id>")
 def generate_invoice(job_id):
 
-    try:
-        if not session.get("admin"):
-            return redirect("/login")
+    if not session.get("admin"):
+        return redirect("/login")
 
-        conn = db()
+    conn = db()
 
-        job = conn.execute("SELECT * FROM workshop_jobs WHERE id=?", (job_id,)).fetchone()
+    job = conn.execute("""
+        SELECT * FROM workshop_jobs
+        WHERE id=?
+    """, (job_id,)).fetchone()
 
-        return str(dict(job))  # 🔥 DEBUG OUTPUT
+    conn.close()
 
-    except Exception as e:
-        return str(e)
+    if not job:
+        return "Job not found"
 
+    labor = float(job["labor_cost"] or 0)
+    parts = float(job["parts_cost"] or 0)
+    paid = float(job["amount_paid"] or 0)
+
+    total = labor + parts
+    balance = total - paid
+
+    invoice_number = job["invoice_no"]
+
+    filename = f"{invoice_number}.pdf"
+
+    filepath = os.path.join("uploads", filename)
+
+    doc = SimpleDocTemplate(filepath, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+
+    content = []
+
+    content.append(
+        Paragraph(
+            "AUTOMOTIVE PROFESSIONALS PTY LTD",
+            styles["Title"]
+        )
+    )
+
+    content.append(Spacer(1, 12))
+
+    content.append(
+        Paragraph(
+            f"Invoice Number: {invoice_number}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Date: {datetime.now().strftime('%Y-%m-%d')}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(Spacer(1, 12))
+
+    content.append(
+        Paragraph(
+            f"Customer: {job['customer_name']}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Phone: {job['phone']}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Vehicle: {job['vehicle_make']} {job['vehicle_model']}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Plate Number: {job['registration']}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(Spacer(1, 12))
+
+    content.append(
+        Paragraph(
+            f"Problem: {job['problem']}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(Spacer(1, 12))
+
+    content.append(
+        Paragraph(
+            f"Labor Cost: R {labor}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Parts Cost: R {parts}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Total Cost: R {total}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Amount Paid: R {paid}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(
+        Paragraph(
+            f"Balance Due: R {balance}",
+            styles["Normal"]
+        )
+    )
+
+    content.append(Spacer(1, 20))
+
+    content.append(
+        Paragraph(
+            "Thank you for choosing Automotive Professionals Pty Ltd",
+            styles["Normal"]
+        )
+    )
+
+    doc.build(content)
+
+    return send_from_directory(
+        "uploads",
+        filename,
+        as_attachment=True
+    )
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
