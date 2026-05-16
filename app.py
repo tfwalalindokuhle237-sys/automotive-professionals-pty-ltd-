@@ -848,6 +848,7 @@ def workshop():
                 <th>Total</th>
                 <th>Paid</th>
                 <th>Balance</th>
+                <th>Actions</th>
             </tr>
 
             {% for j in jobs %}
@@ -860,6 +861,13 @@ def workshop():
                 <td>R {{(j.labor_cost or 0) + (j.parts_cost or 0)}}</td>
                 <td>R {{j.amount_paid}}</td>
                 <td>R {{((j.labor_cost or 0) + (j.parts_cost or 0)) - (j.amount_paid or 0)}}</td>
+
+                <!-- ✅ ADDED ONLY THIS -->
+                <td>
+                    <a href="/admin/invoice/{{j.id}}" class="btn">⬇ Download</a>
+                    <a href="/admin/invoice/{{j.id}}" target="_blank">👁 View</a>
+                </td>
+
             </tr>
             {% endfor %}
         </table>
@@ -867,7 +875,6 @@ def workshop():
 
     </div>
     """, jobs=jobs)
-    
 # ================= WORKSHOP JOB CARD =================
 
 @app.route("/admin/workshop/jobcard", methods=["GET", "POST"])
@@ -1073,35 +1080,55 @@ def generate_invoice(job_id):
     total = labor + parts
     balance = total - paid
 
-    filename = f"{job['invoice_no']}.pdf"
-    filepath = filename
+    invoice_no = job["invoice_no"]
 
-    doc = SimpleDocTemplate(filepath)
+    filename = f"{invoice_no}.pdf"
+    filepath = os.path.join("uploads", filename)
+
+    doc = SimpleDocTemplate(filepath, pagesize=A4)
     styles = getSampleStyleSheet()
 
     elements = []
 
-    elements.append(Paragraph("<b>Automotive Workshop Invoice</b>", styles["Title"]))
+    # HEADER
+    elements.append(Paragraph("AUTOMOTIVE PROFESSIONALS (PTY) LTD", styles["Title"]))
+    elements.append(Spacer(1, 8))
+
+    elements.append(Paragraph("INVOICE", styles["Title"]))
     elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph(f"Invoice: {job['invoice_no']}", styles["BodyText"]))
-    elements.append(Paragraph(f"Customer: {job['customer_name']}", styles["BodyText"]))
-    elements.append(Paragraph(f"Phone: {job['phone']}", styles["BodyText"]))
-    elements.append(Paragraph(f"Vehicle: {job['vehicle']}", styles["BodyText"]))
-    elements.append(Paragraph(f"Plate: {job['plate']}", styles["BodyText"]))
+    # INVOICE INFO
+    elements.append(Paragraph(f"<b>Invoice No:</b> {invoice_no}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Date:</b> {job['date_in']}", styles["Normal"]))
+    elements.append(Spacer(1, 10))
+
+    # CUSTOMER INFO
+    elements.append(Paragraph(f"<b>Customer:</b> {job['customer_name']}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Phone:</b> {job['phone']}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Vehicle:</b> {job['vehicle']}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Plate:</b> {job['plate']}", styles["Normal"]))
 
     elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph(f"Labor: R {labor}", styles["BodyText"]))
-    elements.append(Paragraph(f"Parts: R {parts}", styles["BodyText"]))
-    elements.append(Paragraph(f"Total: R {total}", styles["BodyText"]))
-    elements.append(Paragraph(f"Paid: R {paid}", styles["BodyText"]))
-    elements.append(Paragraph(f"Balance: R {balance}", styles["BodyText"]))
+    # PROBLEM
+    elements.append(Paragraph(f"<b>Problem:</b> {job['problem']}", styles["Normal"]))
+
+    elements.append(Spacer(1, 15))
+
+    # COST BREAKDOWN (TABLE STYLE FEEL)
+    elements.append(Paragraph(f"<b>Labor Cost:</b> R {labor}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Parts Cost:</b> R {parts}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Total:</b> R {total}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Paid:</b> R {paid}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Balance Due:</b> R {balance}", styles["Normal"]))
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(Paragraph("Thank you for trusting our workshop 🙏", styles["Normal"]))
 
     doc.build(elements)
 
-    return send_from_directory(".", filename, as_attachment=True)
-
+    return send_from_directory("uploads", filename, as_attachment=True)
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
@@ -1137,6 +1164,64 @@ def settings_page():
     </form>
     """, s=s)
 
+@app.route("/admin/workshop/edit/<int:job_id>", methods=["GET", "POST"])
+def edit_job(job_id):
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    job = conn.execute("SELECT * FROM workshop_jobs WHERE id=?", (job_id,)).fetchone()
+
+    if request.method == "POST":
+
+        conn.execute("""
+            UPDATE workshop_jobs
+            SET customer_name=?, phone=?, vehicle=?, plate=?, problem=?,
+                labor_cost=?, parts_cost=?, amount_paid=?, status=?
+            WHERE id=?
+        """, (
+            request.form["customer_name"],
+            request.form["phone"],
+            request.form["vehicle"],
+            request.form["plate"],
+            request.form["problem"],
+            float(request.form["labor_cost"]),
+            float(request.form["parts_cost"]),
+            float(request.form["amount_paid"]),
+            request.form["status"],
+            job_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return redirect("/admin/workshop")
+
+    conn.close()
+
+    return render_template_string("""
+    <h2>Edit Job</h2>
+
+    <form method="POST">
+
+        <input name="customer_name" value="{{j.customer_name}}">
+        <input name="phone" value="{{j.phone}}">
+        <input name="vehicle" value="{{j.vehicle}}">
+        <input name="plate" value="{{j.plate}}">
+        <input name="problem" value="{{j.problem}}">
+
+        <input name="labor_cost" value="{{j.labor_cost}}">
+        <input name="parts_cost" value="{{j.parts_cost}}">
+        <input name="amount_paid" value="{{j.amount_paid}}">
+
+        <input name="status" value="{{j.status}}">
+
+        <button>Save Changes</button>
+
+    </form>
+    """, j=job)
 
 # ---------------- FIXED ADMIN HTML (ADDED) ----------------
 ADMIN_LAYOUT = """
