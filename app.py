@@ -865,7 +865,7 @@ def workshop():
                 <!-- ✅ ADDED ONLY THIS -->
                 <td>
                     <a href="/admin/invoice/{{j.id}}" class="btn">⬇ Download</a>
-                    <a href="/admin/invoice/{{j.id}}" target="_blank">👁 View</a>
+                    <a href="/admin/invoice/{{j.id}}" target="_blank">⬇ View</a>
                 </td>
 
             </tr>
