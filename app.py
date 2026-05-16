@@ -1132,17 +1132,22 @@ def generate_invoice(job_id):
     
 @app.route("/admin")
 def admin_home():
+
     if not session.get("admin"):
         return redirect("/login")
 
+    content = render_template_string("""
+
+    <div class="card">
+        <h2>📊 Dashboard</h2>
+        <p>Welcome to ERP Admin Panel</p>
+    </div>
+
+    """)
+
     return render_template_string(
         ADMIN_HTML,
-        content="""
-        <div class="card">
-            <h2>📊 Dashboard</h2>
-            <p>Welcome to ERP Admin Panel</p>
-        </div>
-        """
+        content=content
     )
     
 @app.route("/settings", methods=["GET", "POST"])
@@ -1246,7 +1251,7 @@ ADMIN_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>Automotive ERP Admin</title>
+<title>Automotive Professionals Home</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -1409,6 +1414,7 @@ margin-right:10px;
 </body>
 </html>
 """
+
 @app.route("/admin/student_statement/<int:student_id>")
 def student_statement(student_id):
 
