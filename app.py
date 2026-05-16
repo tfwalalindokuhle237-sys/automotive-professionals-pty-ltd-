@@ -240,7 +240,6 @@ color:white;
 background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
 }
 
-/* DARK OVERLAY */
 .overlay{
 background:rgba(0,0,0,0.88);
 min-height:100vh;
@@ -254,7 +253,6 @@ align-items:center;
 padding:15px 25px;
 background:rgba(0,0,0,0.85);
 border-bottom:1px solid #333;
-backdrop-filter:blur(8px);
 position:sticky;
 top:0;
 z-index:100;
@@ -273,7 +271,6 @@ background:#222;
 color:white;
 margin:0 10px;
 text-decoration:none;
-font-weight:500;
 }
 
 .nav a:hover{
@@ -283,7 +280,7 @@ color:#25D366;
 /* HERO */
 .hero{
 text-align:center;
-padding:70px 20px 30px;
+padding:60px 20px 20px;
 }
 
 .hero-box{
@@ -292,40 +289,33 @@ padding:25px 35px;
 border-radius:15px;
 background:rgba(0,0,0,0.65);
 border:1px solid #333;
-backdrop-filter:blur(8px);
 }
 
 .hero h1{
 margin:0;
 color:#25D366;
-font-size:42px;
+font-size:40px;
 }
 
-.hero p{
-margin-top:10px;
-opacity:0.8;
-}
-
-/* DASHBOARD STATS */
+/* DASHBOARD */
 .dashboard{
 display:flex;
 justify-content:center;
 flex-wrap:wrap;
 gap:20px;
-padding:20px 0;
+padding:20px;
 }
 
 .stat-box{
-background:rgba(20,20,20,0.88);
-padding:18px;
+background:rgba(20,20,20,0.9);
+padding:15px;
 width:200px;
-border-radius:12px;
-border:1px solid #333;
+border-radius:10px;
 text-align:center;
+border:1px solid #333;
 }
 
 .stat-box h2{
-margin:5px 0;
 color:#25D366;
 }
 
@@ -340,22 +330,11 @@ padding:30px;
 
 /* CARD */
 .card{
-background:rgba(20,20,20,0.88);
+background:rgba(20,20,20,0.9);
 padding:22px;
-width:340px;
+width:360px;
 border-radius:15px;
 border:1px solid #333;
-}
-
-/* INPUT */
-input,select{
-width:100%;
-padding:10px;
-margin:8px 0;
-background:#111;
-color:white;
-border:1px solid #333;
-border-radius:6px;
 }
 
 /* BUTTON */
@@ -366,29 +345,36 @@ width:100%;
 border:none;
 cursor:pointer;
 font-weight:bold;
-border-radius:6px;
 color:black;
+border-radius:6px;
 }
 
-/* FILE BOX (NEW IMPROVED UI) */
-.file-box{
-background:#111;
+/* INPUT */
+input,select,textarea{
+width:100%;
 padding:10px;
+margin:8px 0;
+background:#111;
+color:white;
 border:1px solid #333;
 border-radius:6px;
-margin-top:10px;
-font-size:13px;
 }
 
-/* STATUS TAG */
-.status{
-display:inline-block;
-padding:5px 10px;
-border-radius:20px;
-font-size:12px;
-background:#25D366;
-color:black;
+/* SECTION TITLE */
+.section-title{
+color:#25D366;
 font-weight:bold;
+margin-bottom:10px;
+}
+
+/* LIST */
+.list-item{
+background:#111;
+padding:8px;
+margin:5px 0;
+border-left:3px solid #25D366;
+border-radius:5px;
+font-size:13px;
 }
 
 /* FOOTER */
@@ -400,6 +386,7 @@ font-size:13px;
 margin-top:20px;
 border-top:1px solid #222;
 }
+
 </style>
 </head>
 
@@ -421,7 +408,6 @@ border-top:1px solid #222;
 
     <div>
         <a href="/">Home</a>
-
         {% if session.admin %}
             <a href="/admin">Dashboard</a>
             <a href="/settings">Settings</a>
@@ -461,13 +447,13 @@ border-top:1px solid #222;
 
 </div>
 
-<!-- CONTENT -->
+<!-- MAIN -->
 <div class="container">
 
-    <!-- APPLY -->
+    <!-- APPLICATION FORM -->
     <div class="card">
 
-        <h3>Student Application</h3>
+        <div class="section-title">🎓 Student Application</div>
 
         <form method="POST" action="/apply" enctype="multipart/form-data">
 
@@ -481,36 +467,65 @@ border-top:1px solid #222;
                 {% endfor %}
             </select>
 
-            <!-- FILE UPLOAD (REAL FILE ACCEPTANCE) -->
-            <label style="font-size:12px;opacity:0.8">Upload Documents (ID / Certificates)</label>
-            <input type="file" name="file" accept=".pdf,.jpg,.png,.jpeg">
+            <input type="file" name="file">
 
             <button class="btn">Submit Application</button>
 
         </form>
     </div>
 
-    <!-- COURSES -->
+    <!-- APPLICATION REQUIREMENTS -->
     <div class="card">
 
-        <h3>Available Courses</h3>
+        <div class="section-title">📄 Application Requirements</div>
+
+        <div class="list-item">✔ Completed Application Form</div>
+        <div class="list-item">✔ Identification Documents (ID / Passport / Birth Certificate)</div>
+        <div class="list-item">✔ Proof of Residence</div>
+
+        <div class="list-item">✔ Academic Transcripts</div>
+        <div class="list-item">✔ Certificates / Diplomas</div>
+        <div class="list-item">✔ Entrance / Test Results (if required)</div>
+
+        <div class="list-item">✔ Personal Statement / CV</div>
+        <div class="list-item">✔ Letters of Recommendation</div>
+
+        <div class="list-item">✔ Application Fee Proof</div>
+        <div class="list-item">✔ Proof of Funding / Financial Capability</div>
+        <div class="list-item">✔ Medical / Health Clearance</div>
+
+    </div>
+
+    <!-- COURSES (EDITABLE FROM ADMIN) -->
+    <div class="card">
+
+        <div class="section-title">📚 Courses Offered</div>
 
         {% for c in courses %}
-        <div class="file-box">{{c}}</div>
+        <div class="list-item">{{c}}</div>
         {% endfor %}
+
+    </div>
+
+    <!-- SERVICES -->
+    <div class="card">
+
+        <div class="section-title">🔧 Services (Workshop + Training)</div>
+
+        <div class="list-item">Engine Diagnostics & Repair</div>
+        <div class="list-item">Vehicle Servicing & Maintenance</div>
+        <div class="list-item">Brake & Suspension Repairs</div>
+        <div class="list-item">Electrical System Diagnostics</div>
+        <div class="list-item">Welding & Fabrication Training</div>
+        <div class="list-item">Heavy Plant Mechanics Training</div>
 
     </div>
 
 </div>
 
+<!-- FOOTER -->
 <footer>
-
-© 2026 Automotive Professionals (Pty) Ltd
-
-<br><br>
-
-📞 +268 7678 3891 | 💬 WhatsApp Available
-
+© 2026 Automotive Professionals (Pty) Ltd | Automotive Training & Workshop Excellence
 </footer>
 
 </div>
@@ -518,7 +533,6 @@ border-top:1px solid #222;
 </body>
 </html>
 """
-
 def workshop_wallet():
 
     conn = db()
