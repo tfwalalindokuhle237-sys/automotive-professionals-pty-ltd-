@@ -27,8 +27,8 @@ ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
 ADMIN_PASSWORD = "1234"
 
-MAIL_SENDER = "takernkambule@gmail.com"
-MAIL_PASSWORD = "your_app_password"
+MAIL_SENDER = "tfwalalindokuhle237@gmail.com"
+MAIL_PASSWORD = "pvpo qdxj ueya bebu"
 
 # ---------------- DATABASE ----------------
 def db():
