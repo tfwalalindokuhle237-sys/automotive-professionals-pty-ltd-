@@ -947,7 +947,7 @@ def create_jobcard():
         ))
 
         conn.commit()
-        return redirect("/admin/workshop_dashboard")
+        return redirect("/admin/workshop")
 
     return render_template_string("""
 
