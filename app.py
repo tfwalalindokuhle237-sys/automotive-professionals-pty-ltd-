@@ -223,7 +223,7 @@ def send_email(name, email, course):
     except:
         print("Email failed")
 
-# ---------------- UI (UPGRADED PROFESSIONAL FIXED) ----------------
+
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -306,7 +306,7 @@ margin-top:10px;
 opacity:0.8;
 }
 
-/* DASHBOARD STATS (NEW - ADDED ONLY) */
+/* DASHBOARD STATS */
 .dashboard{
 display:flex;
 justify-content:center;
@@ -329,18 +329,6 @@ margin:5px 0;
 color:#25D366;
 }
 
-/* DASHBOARD MINI BADGE */
-.badge{
-display:inline-block;
-margin-top:10px;
-padding:6px 12px;
-font-size:12px;
-background:#25D366;
-color:black;
-border-radius:20px;
-font-weight:bold;
-}
-
 /* MAIN */
 .container{
 display:flex;
@@ -357,12 +345,6 @@ padding:22px;
 width:340px;
 border-radius:15px;
 border:1px solid #333;
-transition:0.3s;
-}
-
-.card:hover{
-transform:translateY(-6px);
-border-color:#25D366;
 }
 
 /* INPUT */
@@ -374,11 +356,6 @@ background:#111;
 color:white;
 border:1px solid #333;
 border-radius:6px;
-}
-
-input:focus,select:focus{
-border-color:#25D366;
-outline:none;
 }
 
 /* BUTTON */
@@ -393,18 +370,25 @@ border-radius:6px;
 color:black;
 }
 
-.btn:hover{
-background:#1fae55;
-}
-
-/* COURSE BLOCK */
-.course{
+/* FILE BOX (NEW IMPROVED UI) */
+.file-box{
 background:#111;
 padding:10px;
-margin:6px 0;
-border-left:3px solid #25D366;
-border-radius:5px;
-font-size:14px;
+border:1px solid #333;
+border-radius:6px;
+margin-top:10px;
+font-size:13px;
+}
+
+/* STATUS TAG */
+.status{
+display:inline-block;
+padding:5px 10px;
+border-radius:20px;
+font-size:12px;
+background:#25D366;
+color:black;
+font-weight:bold;
 }
 
 /* FOOTER */
@@ -416,7 +400,6 @@ font-size:13px;
 margin-top:20px;
 border-top:1px solid #222;
 }
-
 </style>
 </head>
 
@@ -455,14 +438,10 @@ border-top:1px solid #222;
     <div class="hero-box">
         <h1>{{h}}</h1>
         <p>Excellence Through Practical Teaching</p>
-
-        {% if session.admin %}
-        <div class="badge">ADMIN MODE ACTIVE</div>
-        {% endif %}
     </div>
 </div>
 
-<!-- ✅ DASHBOARD STATS (ADDED ONLY HERE) -->
+<!-- STATS -->
 <div class="dashboard">
 
     <div class="stat-box">
@@ -490,11 +469,6 @@ border-top:1px solid #222;
 
         <h3>Student Application</h3>
 
-        <div class="slot" style="opacity:0.8">
-            Welcome To Automotive Professionals.<br>
-            Register below to join our institution.
-        </div>
-
         <form method="POST" action="/apply" enctype="multipart/form-data">
 
             <input name="name" placeholder="Full Name" required>
@@ -507,7 +481,9 @@ border-top:1px solid #222;
                 {% endfor %}
             </select>
 
-            <input type="file" name="file">
+            <!-- FILE UPLOAD (REAL FILE ACCEPTANCE) -->
+            <label style="font-size:12px;opacity:0.8">Upload Documents (ID / Certificates)</label>
+            <input type="file" name="file" accept=".pdf,.jpg,.png,.jpeg">
 
             <button class="btn">Submit Application</button>
 
@@ -520,7 +496,7 @@ border-top:1px solid #222;
         <h3>Available Courses</h3>
 
         {% for c in courses %}
-        <div class="course">{{c}}</div>
+        <div class="file-box">{{c}}</div>
         {% endfor %}
 
     </div>
@@ -529,17 +505,11 @@ border-top:1px solid #222;
 
 <footer>
 
-© 2026 Automotive Professionals (Pty) Ltd | Training Excellence in Eswatini
+© 2026 Automotive Professionals (Pty) Ltd
 
 <br><br>
 
-<div style="display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
-
-    <a href="https://facebook.com" style="color:white;text-decoration:none;">📘 Facebook</a>
-    <a href="https://wa.me/26876783891" style="color:#25D366;text-decoration:none;">💬 WhatsApp</a>
-    <span>📞 +268 7678 3891</span>
-
-</div>
+📞 +268 7678 3891 | 💬 WhatsApp Available
 
 </footer>
 
@@ -548,6 +518,7 @@ border-top:1px solid #222;
 </body>
 </html>
 """
+
 def workshop_wallet():
 
     conn = db()
