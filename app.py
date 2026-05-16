@@ -109,6 +109,21 @@ def init():
     )
     """)
 
+
+    # ---------------- COMPANY COMMUNICATION ----------------
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS company_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender TEXT,
+        receiver_email TEXT,
+        subject TEXT,
+        message TEXT,
+        attachment TEXT,
+        status TEXT,
+        date TEXT
+    )
+    """)
+
     # ---------------- WORKSHOP EXPENSES / WALLET ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS workshop_expenses(
@@ -128,6 +143,34 @@ def init():
         whatsapp TEXT,
         courses TEXT,
         logo TEXT
+    )
+    """)
+    
+    # ---------------- COMPANIES ----------------
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS companies(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        balance REAL DEFAULT 0,
+        date TEXT
+     )
+     """)
+    
+    # ---------------- INVOICES ----------------
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS invoices(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_no TEXT,
+        company_id INTEGER,
+        description TEXT,
+        amount REAL,
+        paid REAL,
+        status TEXT,
+        pdf TEXT,
+        date TEXT
     )
     """)
 
@@ -533,6 +576,20 @@ border-top:1px solid #222;
 </body>
 </html>
 """
+
+def send_company_email(to_email, subject, message):
+    try:
+        msg = f"Subject: {subject}\n\n{message}\n\n-- Automotive Professionals Pty Ltd"
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(MAIL_SENDER, MAIL_PASSWORD)
+        server.sendmail(MAIL_SENDER, to_email, msg)
+        server.quit()
+
+    except Exception as e:
+        print("Email failed:", e)
+
 def workshop_wallet():
 
     conn = db()
@@ -586,6 +643,7 @@ def update_settings(hero, whatsapp, courses, logo):
     conn.commit()
     conn.close()
 
+
 @app.route("/upload_file", methods=["POST"])
 def upload_file():
     if not session.get("admin"):
@@ -611,6 +669,93 @@ def upload_file():
 
     return redirect("/admin")
 
+
+@app.route("/admin/send_message", methods=["POST"])
+def send_message():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    file = save(request.files.get("file"))
+
+    sender = "Automotive Professionals Pty Ltd"
+    receiver = request.form["receiver_email"]
+
+    subject = request.form["subject"]
+    message = request.form["message"]
+
+    conn = db()
+    conn.execute("""
+        INSERT INTO company_messages(
+            sender, receiver_email, subject, message, attachment, status, date
+        ) VALUES(?,?,?,?,?,?,?)
+    """, (
+        sender,
+        receiver,
+        subject,
+        message,
+        file,
+        "SENT",
+        datetime.now().strftime("%Y-%m-%d %H:%M")
+    ))
+    conn.commit()
+    conn.close()
+
+    Thread(
+        target=send_company_email,
+        args=(receiver, subject, message)
+    ).start()
+
+    return redirect("/admin/messages")
+    
+@app.route("/admin/messages")
+def messages():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    msgs = conn.execute("""
+        SELECT * FROM company_messages
+        ORDER BY id DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template_string("""
+
+    <div class="card">
+        <h2>📩 Company Communication Panel</h2>
+
+        <form method="POST" action="/admin/send_message" enctype="multipart/form-data">
+
+            <input name="receiver_email" placeholder="Receiver Email" required>
+            <input name="subject" placeholder="Subject" required>
+            <textarea name="message" placeholder="Message" required></textarea>
+
+            <input type="file" name="file">
+
+            <button class="btn">Send Message / Invoice</button>
+
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>📬 Sent Messages</h3>
+
+        {% for m in msgs %}
+            <div style="background:#111;padding:10px;margin:8px 0;border-left:3px solid #25D366;">
+                <b>{{m.subject}}</b><br>
+                {{m.message}}<br>
+                <small>{{m.receiver_email}} | {{m.date}}</small>
+            </div>
+        {% endfor %}
+
+    </div>
+
+    """, msgs=msgs)    
+    
 @app.route("/promote", methods=["POST"])
 def promote():
     if not session.get("admin"):
@@ -1380,6 +1525,10 @@ margin-right:10px;
         <a href="/admin/files">📁 Files</a>
         <a href="/admin/reports">📄 Reports</a>
         <a href="/logout">🚪 Logout</a>
+        <a href="/admin/messages">📩 Company Messages</a>
+        <a href="/admin/companies">🏢 Companies</a>
+        <a href="/admin/invoices">🧾 Invoices</a>
+        
     </div>
 
     <!-- MAIN -->
@@ -1763,6 +1912,144 @@ def upload_logo():
 
     return redirect("/admin")
 
+@app.route("/admin/companies", methods=["GET", "POST"])
+def companies():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    if request.method == "POST":
+        conn.execute("""
+            INSERT INTO companies(name,email,phone,address,balance,date)
+            VALUES(?,?,?,?,?,?)
+        """, (
+            request.form["name"],
+            request.form["email"],
+            request.form["phone"],
+            request.form["address"],
+            0,
+            datetime.now().strftime("%Y-%m-%d")
+        ))
+        conn.commit()
+
+    data = conn.execute("SELECT * FROM companies").fetchall()
+    conn.close()
+
+    return render_template_string("""
+
+    <div class="card">
+        <h2>🏢 Company Registry</h2>
+
+        <form method="POST">
+            <input name="name" placeholder="Company Name">
+            <input name="email" placeholder="Email">
+            <input name="phone" placeholder="Phone">
+            <input name="address" placeholder="Address">
+            <button class="btn">Add Company</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>Registered Companies</h3>
+
+        {% for c in data %}
+            <div style="padding:10px;background:#111;margin:6px 0;border-left:3px solid #25D366;">
+                <b>{{c.name}}</b><br>
+                {{c.email}} | {{c.phone}}<br>
+                Balance: R{{c.balance}}
+            </div>
+        {% endfor %}
+    </div>
+
+    """, data=data)
+@app.route("/admin/create_invoice", methods=["POST"])
+def create_invoice():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    company_id = request.form["company_id"]
+    amount = float(request.form["amount"])
+    desc = request.form["description"]
+
+    invoice_no = "INV-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+    conn.execute("""
+        INSERT INTO invoices(
+            invoice_no, company_id, description, amount, paid, status, pdf, date
+        ) VALUES(?,?,?,?,?,?,?,?)
+    """, (
+        invoice_no,
+        company_id,
+        desc,
+        amount,
+        0,
+        "UNPAID",
+        "",
+        datetime.now().strftime("%Y-%m-%d")
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin/invoices")
+@app.route("/admin/invoices")
+def invoices():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    data = conn.execute("""
+        SELECT i.*, c.name as company_name
+        FROM invoices i
+        LEFT JOIN companies c ON i.company_id = c.id
+        ORDER BY i.id DESC
+    """).fetchall()
+
+    companies = conn.execute("SELECT * FROM companies").fetchall()
+
+    conn.close()
+
+    return render_template_string("""
+
+    <div class="card">
+        <h2>🧾 Create Invoice</h2>
+
+        <form method="POST" action="/admin/create_invoice">
+
+            <select name="company_id">
+                {% for c in companies %}
+                    <option value="{{c.id}}">{{c.name}}</option>
+                {% endfor %}
+            </select>
+
+            <input name="description" placeholder="Description">
+            <input name="amount" placeholder="Amount">
+
+            <button class="btn">Create Invoice</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>📄 Invoices</h3>
+
+        {% for i in data %}
+            <div style="background:#111;padding:10px;margin:6px 0;border-left:3px solid #25D366;">
+                <b>{{i.invoice_no}}</b><br>
+                Company: {{i.company_name}}<br>
+                Amount: R{{i.amount}} | Paid: R{{i.paid}}<br>
+                Status: {{i.status}}
+            </div>
+        {% endfor %}
+    </div>
+
+    """, data=data, companies=companies)
 @app.route("/admin/pay/<int:student_id>", methods=["POST"])
 def add_payment(student_id):
 
