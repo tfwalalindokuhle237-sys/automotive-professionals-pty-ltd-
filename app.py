@@ -1224,12 +1224,13 @@ def edit_job(job_id):
     """, j=job)
 
 
-# ---------------- FIXED ADMIN HTML (LAYOUT ONLY) ----------------
-ADMIN_LAYOUT = """
+# ---------------- FULL ADMIN UI (SINGLE SYSTEM - CLEAN) ----------------
+
+ADMIN_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>ERP Admin Panel</title>
+<title>Automotive ERP Admin</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -1237,10 +1238,11 @@ ADMIN_LAYOUT = """
 body{
 margin:0;
 font-family:Arial;
-background:url('https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0') center/cover fixed;
 color:white;
+background:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70') center/cover fixed;
 }
 
+/* DARK OVERLAY */
 .overlay{
 display:flex;
 min-height:100vh;
@@ -1249,14 +1251,15 @@ background:rgba(0,0,0,0.85);
 
 /* SIDEBAR */
 .sidebar{
-width:220px;
-background:rgba(0,0,0,0.9);
+width:230px;
+background:rgba(0,0,0,0.92);
 padding:20px;
 border-right:1px solid #333;
 }
 
 .sidebar h2{
 color:#25D366;
+margin-bottom:20px;
 }
 
 .sidebar a{
@@ -1264,9 +1267,10 @@ display:block;
 color:white;
 padding:10px;
 text-decoration:none;
-margin:5px 0;
+margin:6px 0;
 border-radius:6px;
 background:#111;
+transition:0.2s;
 }
 
 .sidebar a:hover{
@@ -1274,37 +1278,92 @@ background:#25D366;
 color:black;
 }
 
-/* MAIN */
+/* MAIN AREA */
 .main{
 flex:1;
 padding:20px;
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:rgba(0,0,0,0.7);
+border:1px solid #333;
+border-radius:10px;
+margin-bottom:15px;
+}
+
+.title{
+font-size:22px;
+color:#25D366;
+font-weight:bold;
 }
 
 /* CARDS */
 .card{
 background:rgba(20,20,20,0.9);
 padding:15px;
-margin-bottom:15px;
 border-radius:10px;
 border:1px solid #333;
+margin-bottom:15px;
 }
 
+/* BUTTON */
 .btn{
 background:#25D366;
 border:none;
 padding:10px;
-width:100%;
-cursor:pointer;
 font-weight:bold;
+cursor:pointer;
+border-radius:5px;
 }
-</style>
 
+/* INPUTS */
+input,textarea{
+width:100%;
+padding:8px;
+margin:5px 0;
+background:#111;
+color:white;
+border:1px solid #333;
+border-radius:5px;
+}
+
+/* TABLE */
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #333;
+padding:8px;
+font-size:13px;
+}
+
+th{
+background:#111;
+color:#25D366;
+}
+
+a.action{
+color:#25D366;
+text-decoration:none;
+margin-right:10px;
+}
+
+</style>
 </head>
 
 <body>
 
 <div class="overlay">
 
+    <!-- SIDEBAR -->
     <div class="sidebar">
         <h2>ERP MENU</h2>
 
@@ -1317,8 +1376,16 @@ font-weight:bold;
         <a href="/logout">🚪 Logout</a>
     </div>
 
+    <!-- MAIN -->
     <div class="main">
+
+        <div class="header">
+            <div class="title">🔧 Automotive Workshop ERP</div>
+        </div>
+
+        <!-- DASHBOARD CONTENT WILL SHOW HERE -->
         {{content}}
+
     </div>
 
 </div>
@@ -1326,7 +1393,6 @@ font-weight:bold;
 </body>
 </html>
 """
-
 @app.route("/admin/student_statement/<int:student_id>")
 def student_statement(student_id):
 
