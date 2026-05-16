@@ -1129,6 +1129,22 @@ def generate_invoice(job_id):
     doc.build(elements)
 
     return send_from_directory("uploads", filename, as_attachment=True)
+    
+@app.route("/admin")
+def admin_home():
+    if not session.get("admin"):
+        return redirect("/login")
+
+    return render_template_string(
+        ADMIN_HTML,
+        content="""
+        <div class="card">
+            <h2>📊 Dashboard</h2>
+            <p>Welcome to ERP Admin Panel</p>
+        </div>
+        """
+    )
+    
 @app.route("/settings", methods=["GET", "POST"])
 def settings_page():
     if not session.get("admin"):
@@ -1777,6 +1793,107 @@ def add_payment(student_id):
     conn.close()
 
     return redirect("/admin/students")
+    
+@app.route("/admin", methods=["GET", "POST"])
+def admin():
+
+    if not session.get("admin"):
+        return redirect("/login")
+
+    conn = db()
+
+    s = conn.execute("""
+        SELECT * FROM settings WHERE id=1
+    """).fetchone()
+
+    data = conn.execute("""
+        SELECT * FROM applications
+        ORDER BY id DESC
+    """).fetchall()
+
+    # SAVE SETTINGS
+    if request.method == "POST":
+
+        conn.execute("""
+            UPDATE settings
+            SET hero=?, whatsapp=?, courses=?
+            WHERE id=1
+        """, (
+            request.form["hero"],
+            request.form["whatsapp"],
+            request.form["courses"]
+        ))
+
+        conn.commit()
+
+        return redirect("/admin")
+
+    conn.close()
+
+    content = render_template_string("""
+
+    <div class="card">
+
+        <h2>⚙ Institution Settings</h2>
+
+        <form method="POST">
+
+            <input
+            name="hero"
+            value="{{s['hero']}}"
+            placeholder="Institution Name">
+
+            <input
+            name="whatsapp"
+            value="{{s['whatsapp']}}"
+            placeholder="WhatsApp Number">
+
+            <textarea
+            name="courses"
+            rows="6"
+            placeholder="Courses">{{s['courses']}}</textarea>
+
+            <button class="btn">Save Settings</button>
+
+        </form>
+
+    </div>
+
+    <div class="card">
+
+        <h2>📥 Applications</h2>
+
+        <table>
+
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Course</th>
+                <th>Date</th>
+            </tr>
+
+            {% for row in data %}
+
+            <tr>
+                <td>{{row['name']}}</td>
+                <td>{{row['phone']}}</td>
+                <td>{{row['course']}}</td>
+                <td>{{row['date']}}</td>
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </div>
+
+    """, s=s, data=data)
+
+    return render_template_string(
+        ADMIN_HTML,
+        content=content
+    )
+    
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
