@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import os
+from config import COMPANY
 os.makedirs("uploads", exist_ok=True)
 
 app = Flask(__name__)
