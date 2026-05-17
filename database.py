@@ -1,23 +1,17 @@
 import sqlite3
-from config import DATABASE
+from config import DB_NAME, DEFAULT_SETTINGS
 
 
-# =========================================================
-# DATABASE CONNECTION
-# =========================================================
-
-def get_db():
-    conn = sqlite3.connect(DATABASE)
+# ================= DB CONNECTION =================
+def db():
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-# =========================================================
-# INITIALISE ALL TABLES (FROM YOUR ORIGINAL SCRIPT)
-# =========================================================
-
-def init_db():
-    conn = get_db()
+# ================= INIT DATABASE =================
+def init():
+    conn = db()
     c = conn.cursor()
 
 
@@ -75,34 +69,21 @@ def init_db():
     c.execute("""
     CREATE TABLE IF NOT EXISTS workshop_jobs(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         invoice_no TEXT,
 
         customer_name TEXT,
         phone TEXT,
-        address TEXT,
-
-        vehicle_make TEXT,
-        vehicle_model TEXT,
-        registration TEXT,
-        vin TEXT,
-        mileage TEXT,
-
+        vehicle TEXT,
+        plate TEXT,
         problem TEXT,
-        diagnosis TEXT,
-        repair_notes TEXT,
-
-        assigned_mechanic TEXT,
 
         labor_cost REAL,
         parts_cost REAL,
-        total_cost REAL,
         amount_paid REAL,
 
-        deadline TEXT,
-
-        status TEXT,
-        date_received TEXT,
-        date_completed TEXT
+        date_in TEXT,
+        status TEXT
     )
     """)
 
@@ -122,7 +103,7 @@ def init_db():
     """)
 
 
-    # ================= EXPENSES =================
+    # ================= WORKSHOP EXPENSES =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS workshop_expenses(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,7 +115,7 @@ def init_db():
     """)
 
 
-    # ================= SETTINGS =================
+    # ================= SETTINGS (DYNAMIC SYSTEM CORE) =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings(
         id INTEGER PRIMARY KEY,
@@ -176,5 +157,27 @@ def init_db():
     """)
 
 
+    # ================= DEFAULT SETTINGS =================
+    c.execute("""
+    INSERT OR IGNORE INTO settings (id, hero, whatsapp, courses, logo)
+    VALUES (
+        1,
+        ?,
+        ?,
+        ?,
+        ?
+    )
+    """, (
+        DEFAULT_SETTINGS["hero"],
+        DEFAULT_SETTINGS["whatsapp"],
+        DEFAULT_SETTINGS["courses"],
+        DEFAULT_SETTINGS["logo"]
+    ))
+
+
     conn.commit()
     conn.close()
+
+
+# ================= INIT CALL =================
+init()
