@@ -2,3 +2,5 @@ flask
 gunicorn
 reportlab
 reportlab
+Flask
+Werkzeug
