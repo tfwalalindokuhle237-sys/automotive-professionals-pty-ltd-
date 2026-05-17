@@ -1,22 +1,10 @@
-from flask import Flask
-from config import Config, DATABASE, UPLOAD_FOLDER
-
-import os
 import sqlite3
+from config import DATABASE
 
 
-# =========================
-# FLASK APP INIT
-# =========================
-
-app = Flask(__name__)
-app.config.from_object(Config)
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-
-# =========================
+# =========================================================
 # DATABASE CONNECTION
-# =========================
+# =========================================================
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -24,40 +12,169 @@ def get_db():
     return conn
 
 
-# =========================
-# REGISTER BLUEPRINTS (MODULES WILL GO HERE)
-# =========================
+# =========================================================
+# INITIALISE ALL TABLES (FROM YOUR ORIGINAL SCRIPT)
+# =========================================================
 
-# We will add these later:
-# from routes.auth import auth_bp
-# from routes.admin import admin_bp
-# from routes.workshop import workshop_bp
-# from routes.finance import finance_bp
-# from routes.files import files_bp
-
-# app.register_blueprint(auth_bp)
-# app.register_blueprint(admin_bp)
-# app.register_blueprint(workshop_bp)
-# app.register_blueprint(finance_bp)
-# app.register_blueprint(files_bp)
+def init_db():
+    conn = get_db()
+    c = conn.cursor()
 
 
-# =========================
-# HEALTH CHECK ROUTE
-# =========================
+    # ================= APPLICATIONS =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS applications(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        phone TEXT,
+        email TEXT,
+        course TEXT,
+        file TEXT,
+        date TEXT
+    )
+    """)
 
-@app.route("/")
-def home():
-    return {
-        "status": "running",
-        "app": "Automotive ERP System",
-        "message": "System is active"
-    }
+
+    # ================= STUDENTS =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS students(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        phone TEXT,
+        email TEXT,
+        course TEXT,
+        status TEXT,
+        date TEXT
+    )
+    """)
 
 
-# =========================
-# RUN SERVER
-# =========================
+    # ================= PAYMENTS =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER,
+        amount REAL,
+        date TEXT
+    )
+    """)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+
+    # ================= FILES =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS files(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT,
+        description TEXT,
+        date TEXT
+    )
+    """)
+
+
+    # ================= WORKSHOP JOBS =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS workshop_jobs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_no TEXT,
+
+        customer_name TEXT,
+        phone TEXT,
+        address TEXT,
+
+        vehicle_make TEXT,
+        vehicle_model TEXT,
+        registration TEXT,
+        vin TEXT,
+        mileage TEXT,
+
+        problem TEXT,
+        diagnosis TEXT,
+        repair_notes TEXT,
+
+        assigned_mechanic TEXT,
+
+        labor_cost REAL,
+        parts_cost REAL,
+        total_cost REAL,
+        amount_paid REAL,
+
+        deadline TEXT,
+
+        status TEXT,
+        date_received TEXT,
+        date_completed TEXT
+    )
+    """)
+
+
+    # ================= COMPANY MESSAGES =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS company_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender TEXT,
+        receiver_email TEXT,
+        subject TEXT,
+        message TEXT,
+        attachment TEXT,
+        status TEXT,
+        date TEXT
+    )
+    """)
+
+
+    # ================= EXPENSES =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS workshop_expenses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item TEXT,
+        amount REAL,
+        description TEXT,
+        date TEXT
+    )
+    """)
+
+
+    # ================= SETTINGS =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS settings(
+        id INTEGER PRIMARY KEY,
+        hero TEXT,
+        whatsapp TEXT,
+        courses TEXT,
+        logo TEXT
+    )
+    """)
+
+
+    # ================= COMPANIES =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS companies(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        balance REAL DEFAULT 0,
+        date TEXT
+    )
+    """)
+
+
+    # ================= INVOICES =================
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS invoices(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_no TEXT,
+        company_id INTEGER,
+        description TEXT,
+        amount REAL,
+        paid REAL,
+        status TEXT,
+        pdf TEXT,
+        date TEXT
+    )
+    """)
+
+
+    conn.commit()
+    conn.close()
