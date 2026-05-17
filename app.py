@@ -190,6 +190,11 @@ def init():
 
 
 init()
+
+
+
+
+
 # ---------------- HELPERS ----------------
 def allowed(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -267,6 +272,8 @@ def send_email(name, email, course):
         print("Email failed")
 
 
+
+#______________Main UI____________#
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -577,6 +584,181 @@ border-top:1px solid #222;
 </html>
 """
 
+# ---------------- FULL ADMIN UI (SINGLE SYSTEM - CLEAN) ----------------
+
+ADMIN_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<title>Automotive Professionals Home</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+color:white;
+background:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70') center/cover fixed;
+}
+
+/* DARK OVERLAY */
+.overlay{
+display:flex;
+min-height:100vh;
+background:rgba(0,0,0,0.85);
+}
+
+/* SIDEBAR */
+.sidebar{
+width:230px;
+background:rgba(0,0,0,0.92);
+padding:20px;
+border-right:1px solid #333;
+}
+
+.sidebar h2{
+color:#25D366;
+margin-bottom:20px;
+}
+
+.sidebar a{
+display:block;
+color:white;
+padding:10px;
+text-decoration:none;
+margin:6px 0;
+border-radius:6px;
+background:#111;
+transition:0.2s;
+}
+
+.sidebar a:hover{
+background:#25D366;
+color:black;
+}
+
+/* MAIN AREA */
+.main{
+flex:1;
+padding:20px;
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:rgba(0,0,0,0.7);
+border:1px solid #333;
+border-radius:10px;
+margin-bottom:15px;
+}
+
+.title{
+font-size:22px;
+color:#25D366;
+font-weight:bold;
+}
+
+/* CARDS */
+.card{
+background:rgba(20,20,20,0.9);
+padding:15px;
+border-radius:10px;
+border:1px solid #333;
+margin-bottom:15px;
+}
+
+/* BUTTON */
+.btn{
+background:#25D366;
+border:none;
+padding:10px;
+font-weight:bold;
+cursor:pointer;
+border-radius:5px;
+}
+
+/* INPUTS */
+input,textarea{
+width:100%;
+padding:8px;
+margin:5px 0;
+background:#111;
+color:white;
+border:1px solid #333;
+border-radius:5px;
+}
+
+/* TABLE */
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #333;
+padding:8px;
+font-size:13px;
+}
+
+th{
+background:#111;
+color:#25D366;
+}
+
+a.action{
+color:#25D366;
+text-decoration:none;
+margin-right:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>ERP MENU</h2>
+
+        <a href="/admin">📊 Dashboard</a>
+        <a href="/admin/students">👨‍🎓 Students</a>
+        <a href="/admin/fees">💰 Fees</a>
+        <a href="/admin/workshop">🚗 Workshop</a>
+        <a href="/admin/files">📁 Files</a>
+        <a href="/admin/reports">📄 Reports</a>
+        <a href="/logout">🚪 Logout</a>
+        <a href="/admin/messages">📩 Company Messages</a>
+        <a href="/admin/companies">🏢 Companies</a>
+        <a href="/admin/invoices">🧾 Invoices</a>
+        
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <div class="header">
+            <div class="title">🔧 Automotive Workshop ERP</div>
+        </div>
+
+        <!-- DASHBOARD CONTENT WILL SHOW HERE -->
+        {{content}}
+
+    </div>
+
+</div>
+
+</body>
+</html>
+"""
+
+#_______________Def______________
 def send_company_email(to_email, subject, message):
     try:
         msg = f"Subject: {subject}\n\n{message}\n\n-- Automotive Professionals Pty Ltd"
@@ -627,8 +809,6 @@ def workshop_wallet():
         "overdue": overdue
     }
 
-# ---------------- ROUTES ----------------
-
 def get_settings():
     return db().execute("SELECT * FROM settings WHERE id=1").fetchone()
 
@@ -644,6 +824,10 @@ def update_settings(hero, whatsapp, courses, logo):
     conn.close()
 
 
+
+
+
+#____________________Routes___________________
 @app.route("/upload_file", methods=["POST"])
 def upload_file():
     if not session.get("admin"):
@@ -1005,7 +1189,7 @@ def workshop():
 
     </div>
     """, jobs=jobs)
-# ================= WORKSHOP JOB CARD =================
+
 
 @app.route("/admin/workshop/jobcard", methods=["GET", "POST"])
 def create_jobcard():
@@ -1182,9 +1366,6 @@ def create_jobcard():
 
     """)
 
-
-
-# ================= PDF INVOICE GENERATOR =================
 
 @app.route("/admin/invoice/<int:job_id>")
 def generate_invoice(job_id):
@@ -1374,180 +1555,6 @@ def edit_job(job_id):
     </form>
     """, j=job)
 
-
-# ---------------- FULL ADMIN UI (SINGLE SYSTEM - CLEAN) ----------------
-
-ADMIN_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-<title>Automotive Professionals Home</title>
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<style>
-body{
-margin:0;
-font-family:Arial;
-color:white;
-background:url('https://images.unsplash.com/photo-1503376780353-7e6692767b70') center/cover fixed;
-}
-
-/* DARK OVERLAY */
-.overlay{
-display:flex;
-min-height:100vh;
-background:rgba(0,0,0,0.85);
-}
-
-/* SIDEBAR */
-.sidebar{
-width:230px;
-background:rgba(0,0,0,0.92);
-padding:20px;
-border-right:1px solid #333;
-}
-
-.sidebar h2{
-color:#25D366;
-margin-bottom:20px;
-}
-
-.sidebar a{
-display:block;
-color:white;
-padding:10px;
-text-decoration:none;
-margin:6px 0;
-border-radius:6px;
-background:#111;
-transition:0.2s;
-}
-
-.sidebar a:hover{
-background:#25D366;
-color:black;
-}
-
-/* MAIN AREA */
-.main{
-flex:1;
-padding:20px;
-}
-
-/* HEADER */
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:15px;
-background:rgba(0,0,0,0.7);
-border:1px solid #333;
-border-radius:10px;
-margin-bottom:15px;
-}
-
-.title{
-font-size:22px;
-color:#25D366;
-font-weight:bold;
-}
-
-/* CARDS */
-.card{
-background:rgba(20,20,20,0.9);
-padding:15px;
-border-radius:10px;
-border:1px solid #333;
-margin-bottom:15px;
-}
-
-/* BUTTON */
-.btn{
-background:#25D366;
-border:none;
-padding:10px;
-font-weight:bold;
-cursor:pointer;
-border-radius:5px;
-}
-
-/* INPUTS */
-input,textarea{
-width:100%;
-padding:8px;
-margin:5px 0;
-background:#111;
-color:white;
-border:1px solid #333;
-border-radius:5px;
-}
-
-/* TABLE */
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:10px;
-}
-
-th,td{
-border:1px solid #333;
-padding:8px;
-font-size:13px;
-}
-
-th{
-background:#111;
-color:#25D366;
-}
-
-a.action{
-color:#25D366;
-text-decoration:none;
-margin-right:10px;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="overlay">
-
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h2>ERP MENU</h2>
-
-        <a href="/admin">📊 Dashboard</a>
-        <a href="/admin/students">👨‍🎓 Students</a>
-        <a href="/admin/fees">💰 Fees</a>
-        <a href="/admin/workshop">🚗 Workshop</a>
-        <a href="/admin/files">📁 Files</a>
-        <a href="/admin/reports">📄 Reports</a>
-        <a href="/logout">🚪 Logout</a>
-        <a href="/admin/messages">📩 Company Messages</a>
-        <a href="/admin/companies">🏢 Companies</a>
-        <a href="/admin/invoices">🧾 Invoices</a>
-        
-    </div>
-
-    <!-- MAIN -->
-    <div class="main">
-
-        <div class="header">
-            <div class="title">🔧 Automotive Workshop ERP</div>
-        </div>
-
-        <!-- DASHBOARD CONTENT WILL SHOW HERE -->
-        {{content}}
-
-    </div>
-
-</div>
-
-</body>
-</html>
-"""
 
 @app.route("/admin/student_statement/<int:student_id>")
 def student_statement(student_id):
@@ -1997,6 +2004,7 @@ def create_invoice():
     conn.close()
 
     return redirect("/admin/invoices")
+    
 @app.route("/admin/invoices")
 def invoices():
 
@@ -2050,6 +2058,7 @@ def invoices():
     </div>
 
     """, data=data, companies=companies)
+    
 @app.route("/admin/pay/<int:student_id>", methods=["POST"])
 def add_payment(student_id):
 
